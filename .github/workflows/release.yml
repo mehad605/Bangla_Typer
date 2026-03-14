@@ -1,0 +1,109 @@
+name: Build & Release
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: "Version tag (e.g. v1.0.0). Leave blank to ONLY build testing artifacts."
+        required: false
+      release_notes:
+        description: "Manual release notes. (Optional)"
+        required: false
+      auto_generate:
+        description: "Auto-generate notes from commits?"
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.13"
+      - name: Build EXE
+        run: uv run python build.py
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bangla-typer-windows
+          path: dist/*.exe
+
+  build-linux:
+    name: Build Linux/Debian
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.13"
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg
+      - name: Build Packages
+        run: uv run python build.py
+      - name: Upload Debian Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bangla-typer-debian
+          path: "*.deb"
+      - name: Upload Portable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bangla-typer-portable-linux
+          path: dist/*.tar.gz
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-windows, build-linux]
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.version_tag != '')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows EXE
+        uses: actions/download-artifact@v4
+        with:
+          name: bangla-typer-windows
+          path: release_assets/
+
+      - name: Download Debian Package
+        uses: actions/download-artifact@v4
+        with:
+          name: bangla-typer-debian
+          path: release_assets/
+
+      - name: Download Linux archive
+        uses: actions/download-artifact@v4
+        with:
+          name: bangla-typer-portable-linux
+          path: release_assets/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version_tag || github.ref_name }}
+          name: ${{ github.event.inputs.version_tag || github.ref_name }}
+          body: ${{ github.event.inputs.release_notes }}
+          generate_release_notes: ${{ github.event.inputs.release_notes == '' && (github.event.inputs.auto_generate == 'true' || github.event_name == 'push') }}
+          files: |
+            release_assets/bangla-typer.exe
+            release_assets/bangla-typer.deb
+            release_assets/bangla-typer.tar.gz
+          draft: false
+          prerelease: false

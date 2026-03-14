@@ -1,0 +1,46 @@
+# Python-generated files
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.python-version
+.ruff_cache/
+
+# Build and Distribution
+build/
+dist/
+wheels/
+*.egg-info/
+bangla-typer-pkg/opt/
+
+# Virtual Environments
+.venv/
+env/
+venv/
+
+# Application Data (local)
+Bangla Data/
+**/Bangla Data/
+config.json
+*.db
+temp/
+**/temp/
+cookies.txt
+links.txt
+
+# Installer Packages
+*.deb
+*.AppImage
+*.zip
+*.tar.gz
+*.exe
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
