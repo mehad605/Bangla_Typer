@@ -1,7 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import os
+import sys
 block_cipher = None
+
+# Disable strip on Windows - it fails with ARM64 DLLs like WebView2Loader.dll
+strip_binaries = False if sys.platform == 'win32' else True
 
 # List of heavy Qt modules to exclude to save space
 qt_excludes = [
@@ -82,7 +86,7 @@ exe = EXE(
     name='bangla-typer',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
+    strip=strip_binaries,
     upx=False,
     console=False,
     disable_windowed_traceback=False,
@@ -98,7 +102,7 @@ coll = COLLECT(
     a.binaries,
     a.zipfiles,
     a.datas,
-    strip=True,
+    strip=strip_binaries,
     upx=False,
     upx_exclude=[],
     name='bangla-typer-dir',
@@ -115,7 +119,7 @@ onefile_exe = EXE(
     name='bangla-typer-portable',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
+    strip=strip_binaries,
     upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,

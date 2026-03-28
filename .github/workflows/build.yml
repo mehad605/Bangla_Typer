@@ -31,16 +31,16 @@ jobs:
           
           # Validate version format (semantic versioning)
           if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Invalid version format: $VERSION"
+            echo "[ERROR] Invalid version format: $VERSION"
             echo "Expected format: X.Y.Z (semantic versioning)"
             exit 1
           fi
           
-          echo "✅ Version validated: $VERSION"
+          echo "[OK] Version validated: $VERSION"
 
       - name: Display version info
         run: |
-          echo "📦 Application Version: ${{ steps.extract-version.outputs.version }}"
+          echo "[PKG] Application Version: ${{ steps.extract-version.outputs.version }}"
           echo "🏷️  Version Tag: ${{ steps.extract-version.outputs.version_tag }}"
 
   # Check code quality and linting
@@ -65,12 +65,12 @@ jobs:
           python -m py_compile gui.py
           python -m py_compile server.py
           find app scripts -name "*.py" -type f -exec python -m py_compile {} \;
-          echo "✅ All Python files have valid syntax"
+          echo "[OK] All Python files have valid syntax"
 
       - name: Check YAML syntax
         run: |
           python -c "import yaml; yaml.safe_load(open('.github/workflows/build.yml')); yaml.safe_load(open('.github/workflows/release.yml'))"
-          echo "✅ All YAML files are valid"
+          echo "[OK] All YAML files are valid"
 
   # Build for Linux
   build-linux:
@@ -100,20 +100,20 @@ jobs:
             librsvg2-bin \
             libfuse2 \
             fuse
-          echo "✅ Build dependencies installed"
+          echo "[OK] Build dependencies installed"
 
       - name: Sync dependencies (locked)
         run: uv sync --frozen
 
       - name: Build packages
         run: |
-          echo "🔨 Building Bangla Typer v${{ needs.validate-version.outputs.version }}"
+          echo "[BUILD] Building Bangla Typer v${{ needs.validate-version.outputs.version }}"
           uv run python build.py
-          echo "✅ Build completed"
+          echo "[OK] Build completed"
 
       - name: List build outputs
         run: |
-          echo "📦 Build artifacts:"
+          echo "[PKG] Build artifacts:"
           ls -lh dist/ *.deb 2>/dev/null || true
           du -sh dist/ 2>/dev/null || true
 
@@ -172,13 +172,13 @@ jobs:
 
       - name: Build Windows EXE
         run: |
-          Write-Host "🔨 Building Bangla Typer v${{ needs.validate-version.outputs.version }}"
+          Write-Host "[BUILD] Building Bangla Typer v${{ needs.validate-version.outputs.version }}"
           uv run python build.py
-          Write-Host "✅ Build completed"
+          Write-Host "[OK] Build completed"
 
       - name: List build outputs
         run: |
-          Write-Host "📦 Build artifacts:"
+          Write-Host "[PKG] Build artifacts:"
           Get-ChildItem dist\ -Recurse -Include *.exe | ForEach-Object { "{0} ({1:N2} MB)" -f $_.FullName, ($_.Length / 1MB) }
 
       - name: Upload Windows EXE
@@ -199,10 +199,10 @@ jobs:
       - name: Check build status
         run: |
           if [[ "${{ needs.build-linux.result }}" == "failure" || "${{ needs.build-windows.result }}" == "failure" ]]; then
-            echo "❌ Build failed"
+            echo "[ERROR] Build failed"
             exit 1
           fi
-          echo "✅ All builds completed successfully"
+          echo "[OK] All builds completed successfully"
 
       - name: Display summary
         run: |

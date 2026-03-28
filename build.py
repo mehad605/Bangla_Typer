@@ -540,7 +540,7 @@ def main():
         sys.exit(1)
 
     print("\n" + "=" * 70)
-    print("✅ Build completed successfully!")
+    print("[SUCCESS] Build completed successfully!")
     print("=" * 70)
     print(f"\nOutput files are in: {DIST_DIR}")
     print("\nFor reproducible builds, ensure you're using:")
