@@ -5,7 +5,6 @@ name: Release
 # 2. Push of git tags matching v*.* pattern
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  UV_LOCKED: true
   PYTHON_VERSION: '3.13'
 
 on:
