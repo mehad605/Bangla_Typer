@@ -425,6 +425,27 @@ def build_appimage(source_dir):
     shutil.copytree(source_dir, bin_dir / APP_NAME)
     os.chmod(bin_dir / APP_NAME / APP_NAME, 0o755)
 
+    # 2a. Fix executable stack on shared libraries (required for modern Linux kernels)
+    # AppImage fails if libpython has executable stack flag set
+    print("Fixing executable stack flags on shared libraries...")
+    if tool_available("execstack"):
+        # Find all .so files and clear executable stack
+        for so_file in (bin_dir / APP_NAME).rglob("*.so*"):
+            try:
+                subprocess.run(
+                    ["execstack", "-c", str(so_file)],
+                    capture_output=True,
+                    check=False,  # Don't fail if execstack can't process some files
+                )
+            except Exception:
+                pass
+        print("[OK] Cleared executable stack flags")
+    else:
+        print(
+            "[WARN] execstack not found - AppImage may fail on systems with strict security"
+        )
+        print("       Install with: sudo apt-get install execstack")
+
     # 3. Icon — at root and in the standard hicolor location
     icon_src = find_icon(source_dir)
     if icon_src:

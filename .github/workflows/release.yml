@@ -163,7 +163,8 @@ jobs:
             wget \
             librsvg2-bin \
             libfuse2 \
-            fuse
+            fuse \
+            execstack
           echo "[OK] Build dependencies installed"
 
       - name: Sync dependencies (locked)
