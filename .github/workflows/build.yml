@@ -2,29 +2,10 @@ name: CI Build
 
 # Trigger on pushes to main/develop and pull requests
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main
-      - develop
-    paths:
-      - 'src/**'
-      - 'app/**'
-      - 'static/**'
-      - 'scripts/**'
-      - 'build.py'
-      - 'pyproject.toml'
-      - '.github/workflows/build.yml'
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - 'src/**'
-      - 'app/**'
-      - 'static/**'
-      - 'scripts/**'
-      - 'build.py'
-      - 'pyproject.toml'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
