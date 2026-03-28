@@ -12,6 +12,9 @@ dist/
 wheels/
 *.egg-info/
 bangla-typer-pkg/opt/
+rpm-build/
+rpm-staging/
+AppDir/
 
 # Virtual Environments
 .venv/
@@ -34,13 +37,45 @@ links.txt
 *.zip
 *.tar.gz
 *.exe
+*.rpm
 
-# OS specific
-.DS_Store
-Thumbs.db
+# Downloaded Tools
+appimagetool
 
-# IDEs
+# IDE and Editor
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS specific
+.DS_Store
+Thumbs.db
+.directory
+
+# PyInstaller
+*.manifest
+*.spec.bak
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# macOS
+.AppleDouble
+.LSOverride
+*.app
+
+# Windows
+desktop.ini
+
+# Logs
+*.log

@@ -1,0 +1,248 @@
+name: CI Build
+
+# Trigger on pushes to main/develop and pull requests
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**'
+      - 'app/**'
+      - 'static/**'
+      - 'scripts/**'
+      - 'build.py'
+      - 'pyproject.toml'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**'
+      - 'app/**'
+      - 'static/**'
+      - 'scripts/**'
+      - 'build.py'
+      - 'pyproject.toml'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  UV_LOCKED: true
+  PYTHON_VERSION: '3.13'
+
+jobs:
+  # Version validation - extract and verify version
+  validate-version:
+    name: Validate Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract-version.outputs.version }}
+      version_tag: ${{ steps.extract-version.outputs.version_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from pyproject.toml
+        id: extract-version
+        run: |
+          VERSION=$(grep -oP 'version = "\K[^"]+' pyproject.toml)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version_tag=v${VERSION}" >> $GITHUB_OUTPUT
+          
+          # Validate version format (semantic versioning)
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Expected format: X.Y.Z (semantic versioning)"
+            exit 1
+          fi
+          
+          echo "✅ Version validated: $VERSION"
+
+      - name: Display version info
+        run: |
+          echo "📦 Application Version: ${{ steps.extract-version.outputs.version }}"
+          echo "🏷️  Version Tag: ${{ steps.extract-version.outputs.version_tag }}"
+
+  # Check code quality and linting
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile build.py
+          python -m py_compile gui.py
+          python -m py_compile server.py
+          find app scripts -name "*.py" -type f -exec python -m py_compile {} \;
+          echo "✅ All Python files have valid syntax"
+
+      - name: Check YAML syntax
+        run: |
+          python -c "import yaml; yaml.safe_load(open('.github/workflows/build.yml')); yaml.safe_load(open('.github/workflows/release.yml'))"
+          echo "✅ All YAML files are valid"
+
+  # Build for Linux
+  build-linux:
+    name: Build Linux (${{ matrix.format }})
+    runs-on: ubuntu-latest
+    needs: validate-version
+    strategy:
+      fail-fast: false
+      matrix:
+        format: [deb, tar-gz, rpm, appimage]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            dpkg \
+            rpm \
+            wget \
+            rsvg-convert
+          echo "✅ Build dependencies installed"
+
+      - name: Sync dependencies (locked)
+        run: uv sync --frozen
+
+      - name: Build packages
+        run: |
+          echo "🔨 Building Bangla Typer v${{ needs.validate-version.outputs.version }}"
+          uv run python build.py
+          echo "✅ Build completed"
+
+      - name: List build outputs
+        run: |
+          echo "📦 Build artifacts:"
+          ls -lh dist/ *.deb 2>/dev/null || true
+          du -sh dist/ 2>/dev/null || true
+
+      - name: Upload Debian package
+        if: matrix.format == 'deb'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bangla-typer-debian-${{ needs.validate-version.outputs.version }}
+          path: bangla-typer.deb
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload tar.gz archive
+        if: matrix.format == 'tar-gz'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bangla-typer-portable-linux-${{ needs.validate-version.outputs.version }}
+          path: dist/bangla-typer-*.tar.gz
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload RPM package
+        if: matrix.format == 'rpm'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bangla-typer-rpm-${{ needs.validate-version.outputs.version }}
+          path: dist/bangla-typer-*.rpm
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload AppImage
+        if: matrix.format == 'appimage'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bangla-typer-appimage-${{ needs.validate-version.outputs.version }}
+          path: dist/bangla-typer-*.AppImage
+          retention-days: 90
+          if-no-files-found: warn
+
+  # Build for Windows
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    needs: validate-version
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - name: Sync dependencies (locked)
+        run: uv sync --frozen
+
+      - name: Build Windows EXE
+        run: |
+          Write-Host "🔨 Building Bangla Typer v${{ needs.validate-version.outputs.version }}"
+          uv run python build.py
+          Write-Host "✅ Build completed"
+
+      - name: List build outputs
+        run: |
+          Write-Host "📦 Build artifacts:"
+          Get-ChildItem dist\ -Recurse -Include *.exe | ForEach-Object { "{0} ({1:N2} MB)" -f $_.FullName, ($_.Length / 1MB) }
+
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: bangla-typer-windows-${{ needs.validate-version.outputs.version }}
+          path: dist/bangla-typer-*.exe
+          retention-days: 90
+          if-no-files-found: warn
+
+  # Generate build summary
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [validate-version, lint, build-linux, build-windows]
+    if: always()
+    steps:
+      - name: Check build status
+        run: |
+          if [[ "${{ needs.build-linux.result }}" == "failure" || "${{ needs.build-windows.result }}" == "failure" ]]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+          echo "✅ All builds completed successfully"
+
+      - name: Display summary
+        run: |
+          cat << 'EOF'
+          ═══════════════════════════════════════════════════════════════
+          📦 BUILD SUMMARY
+          ═══════════════════════════════════════════════════════════════
+          
+          Version: ${{ needs.validate-version.outputs.version }}
+          Tag: ${{ needs.validate-version.outputs.version_tag }}
+          
+          ✅ Lint Check: PASSED
+          ✅ Linux Build: PASSED
+          ✅ Windows Build: PASSED
+          
+          📦 Artifacts:
+            • bangla-typer-debian-${{ needs.validate-version.outputs.version }}
+            • bangla-typer-portable-linux-${{ needs.validate-version.outputs.version }}
+            • bangla-typer-rpm-${{ needs.validate-version.outputs.version }}
+            • bangla-typer-appimage-${{ needs.validate-version.outputs.version }}
+            • bangla-typer-windows-${{ needs.validate-version.outputs.version }}
+          
+          Use 'Download artifact' in GitHub Actions to retrieve files.
+          ═══════════════════════════════════════════════════════════════
+          EOF

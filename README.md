@@ -5,6 +5,21 @@
   Practice on real content. Process YouTube videos. Track your progress in real-time.
 </p>
 
+<p align="center">
+  <a href="https://github.com/mehad605/Bangla_Typer/actions/workflows/build.yml">
+    <img src="https://github.com/mehad605/Bangla_Typer/actions/workflows/build.yml/badge.svg" alt="CI Build">
+  </a>
+  <a href="https://github.com/mehad605/Bangla_Typer/actions/workflows/release.yml">
+    <img src="https://github.com/mehad605/Bangla_Typer/actions/workflows/release.yml/badge.svg" alt="Release">
+  </a>
+  <a href="https://github.com/mehad605/Bangla_Typer/releases/latest">
+    <img src="https://img.shields.io/github/v/release/mehad605/Bangla_Typer?label=Latest%20Release" alt="Latest Release">
+  </a>
+  <a href="https://github.com/mehad605/Bangla_Typer/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
+  </a>
+</p>
+
 ---
 
 ## 🎯 Why Bangla Typer?
@@ -77,11 +92,44 @@ python gui.py
 ## 🛠️ Building from Source
 
 ### Automated Build (Linux & Windows)
+
+The build system creates production-ready packages for multiple platforms:
+
 ```bash
+uv sync --locked
 uv run build.py
 ```
-- **Linux**: Creates a `.deb` package and a portable `.tar.gz` in the root and `dist/` folders.
-- **Windows**: Creates a standalone `.exe` in the `dist/` folder.
+
+**Linux Output:**
+- `bangla-typer.deb` - Debian/Ubuntu package (recommended)
+- `dist/bangla-typer-1.0.0.tar.gz` - Portable archive
+- `dist/bangla-typer-1.0.0-*.rpm` - RPM package (if rpmbuild available)
+- `dist/bangla-typer-1.0.0-*.AppImage` - Universal AppImage (if appimagetool available)
+
+**Windows Output:**
+- `dist/bangla-typer-1.0.0.exe` - Standalone executable
+
+### Build Features
+- ✅ No hardcoded paths—works anywhere
+- ✅ Single version source (pyproject.toml)
+- ✅ Reproducible builds with locked dependencies
+- ✅ Proper Linux integration (FreeDesktop compliant)
+- ✅ Automatic icon detection and bundling
+- ✅ Pre-build validation and environment checks
+
+For detailed build instructions and troubleshooting, see [BUILD_GUIDE.md](./BUILD_GUIDE.md).
+
+### 🔄 Continuous Integration & Releases
+
+Releases are automated using **GitHub Actions**:
+
+- **CI Build**: Automatically builds on every push to validate code
+- **Automated Release**: Tag a release (`git tag v1.0.0 && git push origin v1.0.0`) to automatically:
+  - Build all packages (Windows EXE, Linux deb/rpm/AppImage/tar.gz)
+  - Create GitHub Release
+  - Upload all artifacts
+
+See [RELEASE.md](./RELEASE.md) for release instructions and [WORKFLOW.md](./WORKFLOW.md) for detailed CI/CD documentation.
 
 ---
 
