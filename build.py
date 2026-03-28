@@ -192,19 +192,26 @@ def build_linux():
     )
     print(f"[SUCCESS] Debian package created: {APP_NAME}.deb")
 
-    # Linux version (Portable)
+    # Linux version (Portable) - includes binary directory and LICENSE
     portable_linux = DIST_DIR / f"{APP_NAME}-{VERSION}.tar.gz"
     print(f"Creating Linux archive: {portable_linux}")
-    run(
-        [
-            "tar",
-            "-czf",
-            str(portable_linux),
-            "-C",
-            str(PROJECT_ROOT / "dist"),
-            "bangla-typer-dir",
-        ]
-    )
+
+    with tarfile.open(portable_linux, "w:gz") as tar:
+        # Add binary directory
+        tar.add(
+            source_dir,
+            arcname=f"{APP_NAME}-{VERSION}/bin",
+            filter=lambda tarinfo: tarinfo,
+        )
+        # Add LICENSE file to root of archive
+        license_file = PROJECT_ROOT / "LICENSE"
+        if license_file.exists():
+            tar.add(
+                license_file,
+                arcname=f"{APP_NAME}-{VERSION}/LICENSE",
+                filter=lambda tarinfo: tarinfo,
+            )
+
     print(f"[SUCCESS] Linux portable version created: {portable_linux}")
 
     # 5. Build RPM package
