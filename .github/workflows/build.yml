@@ -97,7 +97,7 @@ jobs:
             dpkg \
             rpm \
             wget \
-            rsvg-convert \
+            librsvg2-bin \
             libfuse2 \
             fuse
           echo "✅ Build dependencies installed"

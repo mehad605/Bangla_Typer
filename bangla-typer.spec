@@ -90,7 +90,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='static/icon.svg',
+    icon='static/icon.ico',
 )
 
 coll = COLLECT(
@@ -125,7 +125,7 @@ onefile_exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='static/icon.svg',
+    icon='static/icon.ico',
 )
 
 
