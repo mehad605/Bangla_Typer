@@ -3,6 +3,13 @@
 ## Date
 March 28, 2026
 
+## Latest Update (March 28, 2026 - Evening)
+**Fixed AUR package LICENSE installation issue:**
+- Modified `build.py` to include LICENSE file in portable tar.gz
+- Updated tarball structure: `bangla-typer-VERSION/{bin/,LICENSE}`
+- Fixed `PKGBUILD-bin` to correctly extract and install LICENSE from tarball root
+- Resolves "LICENSE not found" error during AUR package installation
+
 ## Overview
 The build system has been completely refactored to meet production-grade standards for public distribution. All critical issues identified in the audit have been fixed.
 
