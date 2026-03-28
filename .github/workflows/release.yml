@@ -283,65 +283,12 @@ jobs:
           echo "[OK] Assets organized:"
           ls -lh final_assets/
 
-      - name: Generate release notes
-        id: notes
-        run: |
-          if [[ "${{ github.event.inputs.release_notes }}" != "" ]]; then
-            echo "Using manual release notes"
-            echo 'RELEASE_NOTES<<EOF' >> $GITHUB_ENV
-            echo "${{ github.event.inputs.release_notes }}" >> $GITHUB_ENV
-            echo 'EOF' >> $GITHUB_ENV
-          else
-            # Generate from commits since last tag
-            echo "Generating release notes from commits..."
-            PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-            
-            if [ -z "$PREV_TAG" ]; then
-              COMMIT_RANGE="HEAD"
-            else
-              COMMIT_RANGE="$PREV_TAG..HEAD"
-            fi
-            
-            echo 'RELEASE_NOTES<<EOF' >> $GITHUB_ENV
-            cat << 'NOTES' >> $GITHUB_ENV
-          ## 🎉 What's New
-          
-          ### 📦 Downloads
-          - **Windows**: `bangla-typer-${{ needs.validate.outputs.version }}.exe` - Standalone executable
-          - **Linux (Debian/Ubuntu)**: `bangla-typer.deb` - Install with `sudo apt install ./bangla-typer.deb`
-          - **Linux (Fedora/RHEL)**: `bangla-typer-*.rpm` - Install with `sudo dnf install ./bangla-typer-*.rpm`
-          - **Linux (Universal)**: `bangla-typer-*.AppImage` - Run directly, no installation needed
-          - **Linux (Portable)**: `bangla-typer-${{ needs.validate.outputs.version }}.tar.gz` - Extract and run
-          
-          ### ✨ Features & Improvements
-          See [CHANGES.md](./CHANGES.md) for detailed changelog.
-          
-          ### 🔧 Installation & Usage
-          - **Windows**: Run the .exe file directly
-          - **Linux**: Choose your preferred package format and install
-          - **First Run**: App will auto-detect and create config.json
-          - **Configuration**: Configure data directory in GUI or edit `~/.bangla-typer/config.json`
-          
-          ### 📖 Documentation
-          - [README.md](./README.md) - Quick start guide
-          - [BUILD_GUIDE.md](./BUILD_GUIDE.md) - Build and distribution guide
-          - [WORKFLOW.md](./WORKFLOW.md) - GitHub Actions workflow documentation
-          
-          ### 🐛 Report Issues
-          Found a bug? [Open an issue](https://github.com/mehad605/Bangla_Typer/issues)
-          
-          ---
-          **Release v${{ needs.validate.outputs.version }}** | Built on $(date +'%Y-%m-%d %H:%M UTC')
-          NOTES
-            echo 'EOF' >> $GITHUB_ENV
-          fi
-
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.validate.outputs.version_tag }}
           name: Bangla Typer ${{ needs.validate.outputs.version }}
-          body: ${{ env.RELEASE_NOTES }}
+          body: ${{ github.event.inputs.release_notes }}
           files: |
             final_assets/bangla-typer-*.exe
             final_assets/bangla-typer.deb
