@@ -485,16 +485,32 @@ Categories=Education;Utility;
     env = os.environ.copy()
     env["ARCH"] = platform.machine()
 
-    run(
-        appimage_cmd + ["--no-appstream", str(appdir), str(output)],
-        cwd=PROJECT_ROOT,
-        env=env,
-    )
+    try:
+        result = subprocess.run(
+            appimage_cmd + ["--no-appstream", str(appdir), str(output)],
+            cwd=PROJECT_ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+        )
 
-    if output.exists():
-        print(f"[SUCCESS] AppImage created: {output}")
-    else:
-        print("[WARN] AppImage build completed but output file not found")
+        if result.returncode != 0:
+            print(f"[WARN] AppImage creation failed: {result.stderr}")
+            if "libfuse" in result.stderr or "dlopen" in result.stderr:
+                print("[WARN] FUSE 2 not available - AppImage skipped")
+                print("       (AppImage requires FUSE for runtime execution)")
+            else:
+                print("[WARN] Continuing with other build formats...")
+        elif output.exists():
+            print(f"[SUCCESS] AppImage created: {output}")
+        else:
+            print("[WARN] AppImage build completed but output file not found")
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(f"[WARN] AppImage creation failed: {e}")
+        print("[WARN] Continuing with other build formats...")
+    except Exception as e:
+        print(f"[WARN] Unexpected error during AppImage creation: {e}")
+        print("[WARN] Continuing with other build formats...")
 
     # Cleanup
     shutil.rmtree(appdir, ignore_errors=True)

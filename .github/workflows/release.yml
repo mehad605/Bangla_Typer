@@ -162,7 +162,8 @@ jobs:
             rpm \
             wget \
             rsvg-convert \
-            2>&1 | grep -E "^(Get:|Setting up|Processing)" || true
+            libfuse2 \
+            fuse
           echo "✅ Build dependencies installed"
 
       - name: Sync dependencies (locked)
