@@ -6,6 +6,10 @@
 .python-version
 .ruff_cache/
 
+#AUR
+PKGBUILD
+PKGBUILD-bin
+
 # Build and Distribution
 build/
 dist/
