@@ -1,0 +1,91 @@
+# Python-generated files
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.python-version
+.ruff_cache/
+
+#AUR
+PKGBUILD
+PKGBUILD-bin
+
+# Build and Distribution
+build/
+dist/
+wheels/
+*.egg-info/
+bangla-typer-pkg/opt/
+rpm-build/
+rpm-staging/
+AppDir/
+
+# Virtual Environments
+.venv/
+env/
+venv/
+
+# Application Data (local)
+Bangla Data/
+**/Bangla Data/
+config.json
+*.db
+temp/
+**/temp/
+cookies.txt
+links.txt
+
+# Installer Packages
+*.deb
+*.AppImage
+*.zip
+*.tar.gz
+*.exe
+*.rpm
+
+# Downloaded Tools
+appimagetool
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS specific
+.DS_Store
+Thumbs.db
+.directory
+
+# PyInstaller
+*.manifest
+*.spec.bak
+
+# Tauri
+src-tauri/target/
+src-tauri/server/
+node_modules/
+package-lock.json
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# macOS
+.AppleDouble
+.LSOverride
+*.app
+
+# Windows
+desktop.ini
+
+# Logs
+*.log

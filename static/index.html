@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বাংলা টাইপার</title>
+    <link rel="stylesheet" href="static/css/fonts.css">
+    <link rel="stylesheet" href="static/css/global.css">
+    <script src="static/js/chart.js"></script>
+    <link rel="stylesheet" href="static/css/playlist.css">
+
+    <style>
+        /* Custom title bar hidden - using native window decorations */
+        .custom-title-bar {
+            display: none !important;
+        }
+    </style>
+</head>
+<body data-theme="tokyo-night">
+    <!-- ══════════════════════════════════════
+     CUSTOM WINDOW TITLE BAR (Standalone)
+     ══════════════════════════════════════ -->
+    <div class="custom-title-bar" data-tauri-drag-region>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="window-title" style="padding-left: 5px;" data-tauri-drag-region>বাংলা টাইপার</div>
+        </div>
+        <div class="window-controls">
+            <button class="win-btn min" onclick="window.nativeBridge.minimize_window()" title="Minimize">
+                <svg width="10" height="1" viewBox="0 0 10 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="10" height="1" fill="currentColor"/>
+                </svg>
+            </button>
+            <button class="win-btn max" onclick="window.nativeBridge.toggle_fullscreen()" title="Maximize">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor"/>
+                </svg>
+            </button>
+            <button class="win-btn close" onclick="window.nativeBridge.close_window()" title="Close">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     GLOBAL APP HEADER
+     ══════════════════════════════════════ -->
+    <header class="app-header">
+        <div class="logo" onclick="switchMode('instant')">বাংলা টাইপার</div>
+
+        <div class="mode-tabs">
+            <button class="mode-tab active" id="tab-instant" onclick="switchMode('instant')">⚡ Instant</button>
+            <button class="mode-tab" id="tab-youtube" onclick="switchMode('youtube')">▶ YouTube</button>
+        </div>
+
+        <div class="header-right">
+            <div class="theme-selector">
+                <button class="theme-btn" id="theme-btn" onclick="toggleThemeDropdown()">Themes</button>
+                <div class="theme-dropdown" id="theme-dropdown">
+                    <div class="theme-group">
+                        <div class="theme-group-title">Dark</div>
+                        <button class="theme-option" data-theme="tokyonight" onclick="setTheme('tokyonight')">Tokyo Night</button>
+                        <button class="theme-option" data-theme="dracula" onclick="setTheme('dracula')">Dracula</button>
+                        <button class="theme-option" data-theme="nord" onclick="setTheme('nord')">Nord</button>
+                        <button class="theme-option" data-theme="catppuccin-mocha" onclick="setTheme('catppuccin-mocha')">Catppuccin</button>
+                        <button class="theme-option" data-theme="gruvbox-dark" onclick="setTheme('gruvbox-dark')">Gruvbox</button>
+                        <button class="theme-option" data-theme="github-dark" onclick="setTheme('github-dark')">GitHub</button>
+                        <button class="theme-option" data-theme="everforest" onclick="setTheme('everforest')">Everforest</button>
+                        <button class="theme-option" data-theme="oceanic" onclick="setTheme('oceanic')">Oceanic</button>
+                    </div>
+                    <div class="theme-group">
+                        <div class="theme-group-title">Light</div>
+                        <button class="theme-option" data-theme="atom-one-light" onclick="setTheme('atom-one-light')">Atom One</button>
+                        <button class="theme-option" data-theme="rosepine-dawn" onclick="setTheme('rosepine-dawn')">Rosé Pine</button>
+                    </div>
+                    <div class="theme-group">
+                        <div class="theme-group-title">Neon</div>
+                        <button class="theme-option" data-theme="neon-green" onclick="setTheme('neon-green')">Green</button>
+                        <button class="theme-option" data-theme="neon-blue" onclick="setTheme('neon-blue')">Blue</button>
+                        <button class="theme-option" data-theme="neon-red" onclick="setTheme('neon-red')">Red</button>
+                        <button class="theme-option" data-theme="neon-orange" onclick="setTheme('neon-orange')">Orange</button>
+                        <button class="theme-option" data-theme="neon-purple" onclick="setTheme('neon-purple')">Purple</button>
+                        <button class="theme-option" data-theme="neon-pink" onclick="setTheme('neon-pink')">Pink</button>
+                    </div>
+                </div>
+            </div>
+            <button class="theme-btn" id="settings-btn" onclick="openSettingsModal()" title="Settings" style="margin-left: 8px; padding: 6px; display: flex; align-items: center; justify-content: center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- ══════════════════════════════════════
+     INSTANT APP MODE (Trainer)
+══════════════════════════════════════ -->
+    <div id="app-instant">
+
+        <div class="inst-mode-tabs" id="inst-tabs-container">
+            <button class="inst-tab active" id="inst-tab-type" onclick="switchInstTab('type')">টাইপ</button>
+            <button class="inst-tab" id="inst-tab-stats" onclick="switchInstTab('stats')">স্ট্যাটস</button>
+        </div>
+
+        <div id="inst-view-type"
+            style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1;">
+            <div class="main-wrap">
+                <div class="top-bar">
+                    <div class="controls">
+                        <button class="btn" id="btn-new" onclick="loadNewText()">↺ নতুন</button>
+                        <button class="btn" id="btn-reset" onclick="resetTyping()">⟳ রিসেট</button>
+                        <div class="hints-wrap">
+                            <button class="btn" id="btn-hints" onclick="toggleHintsPanel()">⚙ Hints ▾</button>
+                            <div class="hints-panel" id="hints-panel">
+                                <div class="hint-row">
+                                    <span class="hint-label">✦ Glow effect</span>
+                                    <label class="toggle">
+                                        <input type="checkbox" id="tog-glow" checked onchange="applyHints()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="hints-divider"></div>
+                                <div class="hint-row">
+                                    <span class="hint-label">✋ Show hands</span>
+                                    <label class="toggle">
+                                        <input type="checkbox" id="tog-hands" checked onchange="applyHints()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="hints-divider"></div>
+                                <div class="hint-row">
+                                    <span class="hint-label">⌨ Show keyboard</span>
+                                    <label class="toggle">
+                                        <input type="checkbox" id="tog-keyboard" checked onchange="applyHints()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="hints-divider"></div>
+                                <div class="hint-row">
+                                    <span class="hint-label">💬 Step guide</span>
+                                    <label class="toggle">
+                                        <input type="checkbox" id="tog-guide" checked onchange="applyHints()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stats" style="flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+                        <div style="display:flex; gap: 0.8rem;">
+                            <span>অক্ষর: <span class="stat-val stat-total" id="stat-chars">০</span></span>
+                            <span>✓ <span class="stat-val stat-correct" id="stat-correct">০</span></span>
+                            <span>✗ <span class="stat-val stat-wrong" id="stat-wrong">০</span></span>
+                        </div>
+                        <div style="display:flex; gap: 0.8rem; font-size: 0.9em;">
+                            <span>কীস্ট্রোক: <span class="stat-val stat-total" id="stat-keys-total">০</span></span>
+                            <span>✓ <span class="stat-val stat-correct" id="stat-keys-correct">০</span></span>
+                            <span>✗ <span class="stat-val stat-wrong" id="stat-keys-wrong">০</span></span>
+                        </div>
+                        <div
+                            style="display:flex; gap: 0.8rem; font-size: 0.95em; color: var(--accent); margin-top: 2px;">
+                            <span>গতি (WPM): <span class="stat-val stat-correct" id="stat-wpm-rt">০</span></span>
+                            <span>সঠিকতা: <span class="stat-val stat-correct" id="stat-acc-rt">১০০%</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step Guide component -->
+                <div class="step-guide" id="step-guide">
+                    <span class="step-guide-label">টাইপ করুন</span>
+                    <div class="step-divider"></div>
+                    <span class="step-bn-char" id="step-bn">—</span>
+                    <span class="step-arrow">→</span>
+                    <span class="key-pill" id="step-keys"></span>
+                    <span class="step-context" id="step-context"></span>
+                </div>
+
+                <!-- Boxed Typing area for Instant Mode -->
+                <div class="inst-typing-area" onclick="focusInput()">
+                    <div id="typed-display"></div>
+                    <input type="text" class="hidden-input" id="hidden-input" autocomplete="off" autocorrect="off"
+                        autocapitalize="off" spellcheck="false">
+                </div>
+
+                <div class="inst-bottom-area">
+                    <div class="success-bar" id="success-bar">✓ সম্পন্ন! নতুন টেক্সটের জন্য "নতুন" ক্লিক করুন।</div>
+                    <div class="keyboard-wrap" id="svg-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="inst-view-stats" style="display: none;">
+            <div class="mt-stats-dashboard">
+                <div class="mt-stats-header">
+                    <div class="title">estimated words typed</div>
+                    <div class="val" id="gstat-words-typed">0</div>
+                </div>
+
+                <div class="mt-triple-group">
+                    <!-- Row 1 -->
+                    <div class="mt-group">
+                        <div class="title">tests started</div>
+                        <div class="val" id="gstat-started">0</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">tests completed</div>
+                        <div class="val" id="gstat-completed">0 (0%)</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">time typing</div>
+                        <div class="val" id="gstat-timetyping">00:00:00</div>
+                    </div>
+
+                    <!-- Row 2 -->
+                    <div class="mt-group">
+                        <div class="title">highest wpm</div>
+                        <div class="val" id="mgrid-hwpm">0</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">average wpm</div>
+                        <div class="val" id="mgrid-awpm">0</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">average wpm (last 10 tests)</div>
+                        <div class="val" id="mgrid-awpm-10">0</div>
+                    </div>
+
+                    <!-- Row 3 -->
+                    <div class="mt-group">
+                        <div class="title">highest raw wpm</div>
+                        <div class="val" id="mgrid-hraw">0</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">average raw wpm</div>
+                        <div class="val" id="mgrid-araw">0</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">average raw wpm (last 10 tests)</div>
+                        <div class="val" id="mgrid-araw-10">0</div>
+                    </div>
+
+                    <!-- Row 4 -->
+                    <div class="mt-group">
+                        <div class="title">highest accuracy</div>
+                        <div class="val" id="mgrid-hacc">0%</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">avg accuracy</div>
+                        <div class="val" id="mgrid-aacc">0%</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">avg accuracy (last 10 tests)</div>
+                        <div class="val" id="mgrid-aacc-10">0%</div>
+                    </div>
+
+                    <!-- Row 5 -->
+                    <div class="mt-group">
+                        <div class="title">highest consistency</div>
+                        <div class="val" id="mgrid-hcons">0%</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">avg consistency</div>
+                        <div class="val" id="mgrid-acons">0%</div>
+                    </div>
+                    <div class="mt-group">
+                        <div class="title">avg consistency (last 10 tests)</div>
+                        <div class="val" id="mgrid-acons-10">0%</div>
+                    </div>
+                </div>
+
+                <!-- Small Activity Section -->
+                <div class="mt-activity-section">
+                    <div class="activity-header">
+                        <div class="activity-header-left">
+                            <select class="activity-dropdown">
+                                <option>last 12 months</option>
+                            </select>
+                            <span class="activity-count" id="mt-total-tests">0 tests</span>
+                        </div>
+                        <div class="activity-legend" style="display:flex; gap:5px; align-items:center;">
+                            <span style="font-size:0.75rem; margin-right:5px;">less</span>
+                            <div class="activity-day" data-level="0" style="width:12px; height:12px;"></div>
+                            <div class="activity-day" data-level="1" style="width:12px; height:12px;"></div>
+                            <div class="activity-day" data-level="2" style="width:12px; height:12px;"></div>
+                            <div class="activity-day" data-level="3" style="width:12px; height:12px;"></div>
+                            <div class="activity-day" data-level="4" style="width:12px; height:12px;"></div>
+                            <span style="font-size:0.75rem; margin-left:5px;">more</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; position: relative; align-items: flex-start;">
+                        <!-- Left Labels -->
+                        <div class="activity-labels-left">
+                            <div>monday</div>
+                            <div></div>
+                            <div>wednesday</div>
+                            <div></div>
+                            <div>friday</div>
+                            <div></div>
+                            <div>sunday</div>
+                        </div>
+
+                        <!-- Grid Container -->
+                        <div style="flex: 1; display: flex; flex-direction: column;">
+                            <div class="test-activity" id="mt-activity-grid">
+                                <!-- Populated by JS -->
+                            </div>
+                            <!-- Bottom Labels (Months) -->
+                            <div class="activity-labels-bottom" id="mt-month-labels">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="activity-note">Note: All activity data is using UTC time.</div>
+                </div>
+
+                <!-- History Charts -->
+                <div class="mt-chart-section">
+                    <h3 >wpm
+                        history</h3>
+                    <div class="mt-chart-container" style="height: 200px;">
+                        <canvas id="inst-history-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="mt-chart-section">
+                    <h3 >accuracy
+                        history</h3>
+                    <div class="mt-chart-container" style="height: 200px;">
+                        <canvas id="inst-acc-history-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Speed Distribution Chart -->
+                <div class="mt-chart-section">
+                    <h3 >speed
+                        distribution</h3>
+                    <div class="mt-chart-container">
+                        <canvas id="inst-dist-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Tests Table -->
+                <div class="mt-results-table-section">
+                    <h3>recent tests</h3>
+                    <div class="table-wrap">
+                        <table class="mt-table" id="mt-recent-table">
+                            <thead>
+                                <tr>
+                                    <th>wpm</th>
+                                    <th>raw</th>
+                                    <th>accuracy</th>
+                                    <th>consistency</th>
+                                    <th title="correct / incorrect / extra / missed">characters</th>
+                                    <th>date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     YOUTUBE APP MODE
+══════════════════════════════════════ -->
+    <div id="app-youtube">
+        <!-- Unified Navigation Bar per Reference Image -->
+        <div class="yt-nav-unified" id="yt-nav-unified">
+            <div class="yt-nav-center">
+                <button class="inst-tab active" id="yt-tab-library" onclick="switchYTMainTab('library')">সংগ্রহ</button>
+                <button class="inst-tab" id="yt-tab-playlist" onclick="switchYTMainTab('playlist')">প্লেলিস্ট</button>
+                <button class="inst-tab" id="yt-tab-stats" onclick="switchYTMainTab('stats')">পরিসংখ্যান</button>
+            </div>
+            <div class="yt-nav-right">
+                <button class="add-btn" id="add-btn" onclick="openUrlModal()"
+                    style="margin: 0; border-style: solid; background: var(--surface2);">
+                    <span>＋</span> YouTube লিংক যোগ করুন
+                </button>
+                <button class="add-btn" id="manual-add-btn" type="button" onclick="openManualAddModal()"
+                    style="margin: 0; border-style: solid; background: var(--surface2);">
+                    <span>＋</span> ম্যানুয়ালি যোগ করুন
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 1 — LIBRARY -->
+        <div class="screen active" id="screen-library">
+            <div class="library-wrap">
+                <!-- Advanced Search Bar -->
+                <div class="yt-search-container">
+                    <div class="yt-search-box">
+                        <div class="yt-search-icon">🔍</div>
+                        <input type="text" id="yt-library-search" class="yt-search-input" placeholder="সার্চ করুন (Title, channel:name, source:name...)" autocomplete="off">
+                        <div class="yt-search-hint">title: robindor & source: youtube ~ channel: mir</div>
+                    </div>
+                </div>
+
+                <div class="video-grid" id="video-grid" style="padding-top: 1rem;">
+                    <!-- Cards injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2 — VIDEO DETAIL -->
+        <div class="screen" id="screen-detail">
+            <div class="screen-header">
+                <div class="breadcrumb">
+                    <a onclick="goBackToLibrary()">সংগ্রহ</a>
+                    <span class="sep">/</span>
+                    <span class="current" id="detail-breadcrumb">ভিডিও</span>
+                </div>
+            </div>
+
+            <div class="detail-wrap">
+                <div class="detail-hero">
+                    <div id="detail-thumb-container">
+                        <div class="detail-thumb-placeholder">▶</div>
+                    </div>
+                    <div class="detail-meta">
+                        <div class="detail-title" id="detail-title"></div>
+                        <div class="detail-channel" id="detail-channel"></div>
+
+                        <div class="detail-stats-grid">
+                            <div class="d-stat-box">
+                                <span class="d-stat-lbl">মোট শব্দ</span>
+                                <span class="d-stat-val" id="detail-words">০</span>
+                            </div>
+                            <div class="d-stat-box">
+                                <span class="d-stat-lbl">মোট অক্ষর</span>
+                                <span class="d-stat-val" id="detail-chars">০</span>
+                            </div>
+                            <div class="d-stat-box">
+                                <span class="d-stat-lbl">চ্যাপ্টার</span>
+                                <span class="d-stat-val" id="detail-parts-count">০</span>
+                            </div>
+                            <div class="d-stat-box">
+                                <span class="d-stat-lbl">মোট পাতা</span>
+                                <span class="d-stat-val" id="detail-pages-count">০</span>
+                            </div>
+                            <div class="d-stat-box">
+                                <span class="d-stat-lbl">গড় শব্দ/মিনিট</span>
+                                <span class="d-stat-val" id="detail-avg-wpm">০</span>
+                            </div>
+                            <div class="d-stat-box">
+                                <span class="d-stat-lbl">গড় সঠিকতা</span>
+                                <span class="d-stat-val" id="detail-avg-acc">০%</span>
+                            </div>
+                        </div>
+
+                        <div class="detail-progress-row">
+                            <div class="detail-progress-bar">
+                                <div class="detail-progress-fill" id="detail-progress-fill" style="width:0%"></div>
+                            </div>
+                            <span class="detail-progress-label" id="detail-progress-label">০% Complete</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="parts-header">চ্যাপ্টার সূচি</div>
+                <div class="parts-list" id="parts-list">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 4 — YOUTUBE STATS -->
+        <div class="screen" id="screen-yt-stats">
+            <div class="stats-container">
+                <!-- Top Stats Row -->
+                <div class="stats-header">
+                    <div class="stat-block">
+                        <div class="stat-value" id="stats-total-words">০</div>
+                        <div class="stat-label">শব্দ টাইপ করা হয়েছে</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="stats-total-chars">০</div>
+                        <div class="stat-label">অক্ষর টাইপ করা হয়েছে</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="stats-total-videos">০</div>
+                        <div class="stat-label">ভিডিও সম্পন্ন</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="stats-total-sessions">০</div>
+                        <div class="stat-label">সেশন সম্পন্ন</div>
+                    </div>
+                </div>
+                
+                <!-- Summary Bar -->
+                <div class="stats-summary">
+                    <div class="stats-summary-left">
+                        <span class="stats-summary-label">গড় পরিসংখ্যান</span>
+                        <span style="color:var(--accent); font-size:0.65rem;">(শেষ ১০ ভিডিওর সর্বশেষ থেকে)</span>
+                    </div>
+                    <div class="stats-summary-stats">
+                        <div class="summary-stat">
+                            <span class="summary-stat-label">WPM</span>
+                            <span class="summary-stat-value wpm" id="stats-avg-wpm">০</span>
+                        </div>
+                        <div class="stats-summary-divider"></div>
+                        <div class="summary-stat">
+                            <span class="summary-stat-label">ACC</span>
+                            <span class="summary-stat-value acc" id="stats-avg-acc">০</span>
+                            <span class="summary-stat-unit">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Divider -->
+                <div class="stats-section-title">সম্পন্ন ভিডিও সমূহ</div>
+
+                <!-- Completed Videos List -->
+                <div class="completed-videos-list" id="completed-videos-list">
+                    <!-- Cards injected by JS -->
+                </div>
+                
+                <!-- Empty State -->
+                <div class="stats-empty" id="stats-empty" style="display:none;">
+                    <div class="empty-icon">📚</div>
+                    <div class="empty-text">কোনো ভিডিও সম্পন্ন হয়নি</div>
+                    <div class="empty-hint">একটি ভিডিও নির্বাচন করে টাইপিং শুরু করুন</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 5 — PLAYLIST VIEW -->
+        <div class="screen" id="screen-playlist">
+            <div class="library-wrap">
+                <div class="library-toolbar" style="margin-bottom: 2rem;">
+                    <div class="library-title">🎵 প্লেলিস্ট সমূহ</div>
+                    <button class="add-btn" id="new-playlist-btn" onclick="openNewPlaylistModal()">
+                        <span>＋</span> নতুন প্লেলিস্ট
+                    </button>
+                </div>
+                <div class="playlist-grid" id="playlist-grid">
+                    <!-- Playlist cards injected by JS -->
+                </div>
+                <div class="stats-empty" id="playlist-empty" style="display:none;">
+                    <div class="empty-icon">🎵</div>
+                    <div class="empty-text">কোনো প্লেলিস্ট নেই</div>
+                    <div class="empty-hint">ভিডিও কার্ডে থাকা চেকবক্স ক্লিক করে ভিডিও নির্বাচন করুন এবং প্লেলিস্টে যোগ করুন</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 6 — PLAYLIST DETAIL -->
+        <div class="screen" id="screen-playlist-detail">
+            <div class="screen-header">
+                <div class="breadcrumb">
+                    <a onclick="showPlaylistScreen()">প্লেলিস্ট</a>
+                    <span class="sep">/</span>
+                    <span class="current" id="pl-detail-name">প্লেলিস্ট</span>
+                </div>
+            </div>
+
+            <div class="library-wrap">
+                <div class="library-toolbar" style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="library-title" id="pl-detail-title" style="font-size: 1.1rem; color: var(--text); text-transform: none;"></div>
+                        <button class="btn" style="font-size: 0.7rem; padding: 3px 10px;" onclick="window.openEditPlaylistModal()" id="pl-rename-btn">✏️ সম্পাদনা</button>
+                    </div>
+                    <button class="modal-btn primary" style="font-size: 0.72rem; padding: 6px 16px;" onclick="deleteCurrentPlaylist()">🗑 প্লেলিস্ট মুছুন</button>
+                </div>
+                <div class="video-grid" id="pl-video-grid" style="padding-top: 0.5rem;">
+                    <!-- Cards injected by JS -->
+                </div>
+                <div class="stats-empty" id="pl-detail-empty" style="display:none;">
+                    <div class="empty-icon">📭</div>
+                    <div class="empty-text">এই প্লেলিস্টে কোনো ভিডিও নেই</div>
+                    <div class="empty-hint">সংগ্রহ থেকে ভিডিও নির্বাচন করে এই প্লেলিস্টে যোগ করুন</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 3 — TYPING CONSOLE -->
+
+        <div class="screen" id="screen-console">
+            <div class="screen-header">
+                <div class="breadcrumb">
+                    <a onclick="goBackToLibrary()">সংগ্রহ</a>
+                    <span class="sep">/</span>
+                    <a id="console-bc-video" onclick="goBackToDetail()">Title</a>
+                    <span class="sep">/</span>
+                    <span id="console-bc-part" style="color:var(--text); font-weight:700;">অধ্যায়
+                        ১</span>
+                </div>
+
+                <!-- Right stats (Translated Numerals) -->
+                <div class="console-stats" style="gap: 1.5rem;">
+                    <div class="console-stat">
+                        <span id="stat-pos" style="color:var(--subtext);">পাতা ১/১</span>
+                    </div>
+                    <span style="color:var(--border)">|</span>
+                    <div class="console-stat">
+                        <span class="console-stat-val" id="stat-wpm">০</span>
+                        <span style="font-size:0.65rem; color:var(--subtext);">শব্দ/মিনিট</span>
+                    </div>
+                    <div class="console-stat">
+                        <span class="console-stat-val" id="stat-acc">১০০%</span>
+                        <span style="font-size:0.65rem; color:var(--subtext);">সঠিকতা</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="console-body">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem 1rem 0; width: 100%;">
+                    <!-- Left controls -->
+                    <div class="controls">
+                        <button class="btn" onclick="resetYTTyping()">↺ রিসেট</button>
+                        <div class="hints-wrap">
+                            <button class="btn" id="yt-btn-hints" onclick="toggleYTHintsPanel()">⚙ Hints ▾</button>
+                            <div class="hints-panel" id="yt-hints-panel">
+                                <div class="hint-row">
+                                    <span class="hint-label">✦ Glow effect</span>
+                                    <label class="toggle"><input type="checkbox" id="yt-tog-glow" checked
+                                            onchange="applyYTHints()"><span class="toggle-slider"></span></label>
+                                </div>
+                                <div class="hints-divider"></div>
+                                <div class="hint-row">
+                                    <span class="hint-label">✋ Show hands</span>
+                                    <label class="toggle"><input type="checkbox" id="yt-tog-hands" checked
+                                            onchange="applyYTHints()"><span class="toggle-slider"></span></label>
+                                </div>
+                                <div class="hints-divider"></div>
+                                <div class="hint-row">
+                                    <span class="hint-label">⌨ Show keyboard</span>
+                                    <label class="toggle"><input type="checkbox" id="yt-tog-keyboard" checked
+                                            onchange="applyYTHints()"><span class="toggle-slider"></span></label>
+                                </div>
+                                <div class="hints-divider"></div>
+                                <div class="hint-row">
+                                    <span class="hint-label">💬 Step guide</span>
+                                    <label class="toggle"><input type="checkbox" id="yt-tog-guide" checked
+                                            onchange="applyYTHints()"><span class="toggle-slider"></span></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right stats -->
+                    <div class="stats" style="flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+                        <div style="display:flex; gap: 0.8rem;">
+                            <span>অক্ষর: <span class="stat-val stat-total" id="yt-stat-chars">০</span></span>
+                            <span>✓ <span class="stat-val stat-correct" id="yt-stat-correct">০</span></span>
+                            <span>✗ <span class="stat-val stat-wrong" id="yt-stat-wrong">০</span></span>
+                        </div>
+                        <div style="display:flex; gap: 0.8rem; font-size: 0.9em;">
+                            <span>কীস্ট্রোক: <span class="stat-val stat-total" id="yt-stat-keys-total">০</span></span>
+                            <span>✓ <span class="stat-val stat-correct" id="yt-stat-keys-correct">০</span></span>
+                            <span>✗ <span class="stat-val stat-wrong" id="yt-stat-keys-wrong">০</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="console-part-title" id="console-part-label" style="padding: 1rem 1rem 0;"></div>
+
+                <!-- Step Guide component -->
+                <div class="step-guide" id="yt-step-guide">
+                    <span class="step-guide-label">টাইপ করুন</span>
+                    <div class="step-divider"></div>
+                    <span class="step-bn-char" id="yt-step-bn">—</span>
+                    <span class="step-arrow">→</span>
+                    <span class="key-pill" id="yt-step-keys"></span>
+                    <span class="step-context" id="yt-step-context"></span>
+                </div>
+
+                <!-- TOP HALF: Book-Style Typing Area -->
+                <div class="yt-typing-area" onclick="focusYTTyping()">
+                    <div id="yt-typed-display"></div>
+                    <input class="hidden-input" id="yt-console-input" autocomplete="off" autocorrect="off"
+                        autocapitalize="off" spellcheck="false">
+                </div>
+
+                <!-- BOTTOM HALF: Shrunken Keyboard -->
+                <div class="yt-bottom-area">
+
+                    <!-- Keyboard -->
+                    <div class="keyboard-wrap" id="yt-svg-container"></div>
+                </div>
+
+                <!-- Navigation Bar -->
+                <div class="yt-nav-bar">
+                    <button class="nav-btn" id="btn-prev-part" onclick="prevPart()">
+                        <span>◀◀ আগের অধ্যায়</span>
+                    </button>
+                    <button class="nav-btn" id="btn-prev-page" onclick="prevPage()">
+                        <span>◀ আগের পাতা</span>
+                    </button>
+                    
+                    <button class="nav-btn" id="btn-next-page" onclick="nextPage()">
+                        <span>পরের পাতা ▶</span>
+                    </button>
+                    <button class="nav-btn" id="btn-next-part" onclick="nextPartFromConsole()">
+                        <span>পরের অধ্যায় ▶▶</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     MODALS (YouTube Mode)
+══════════════════════════════════════ -->
+
+
+    <div class="modal-overlay" id="modal-reset-part">
+        <div class="modal" style="max-width: 400px; text-align: center;">
+            <input type="hidden" id="modal-reset-vid">
+            <input type="hidden" id="modal-reset-partidx">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">⚠️</div>
+            <h3 style="margin-top: 0; color: var(--text);">চ্যাপ্টার রিসেট</h3>
+            <p style="color: var(--subtext); font-size: 0.9rem; margin-bottom: 25px; line-height: 1.5;">
+                আপনি কি এই চ্যাপ্টারের বর্তমান প্রগ্রেস মুছে ফেলতে চান? এটি আপনাকে আবার প্রথম পাতা থেকে শুরু করতে দেবে।
+                আপনার পূর্বের বেস্ট স্কোর মুছে যাবে না।
+            </p>
+            <div class="modal-actions" style="gap: 12px; margin-top: 1rem;">
+                <button class="modal-btn secondary" style="flex:1"
+                    onclick="document.getElementById('modal-reset-part').classList.remove('open')">বাতিল</button>
+                <button class="modal-btn primary" style="flex:1; background: #ff4757; border-color: #ff4757;"
+                    onclick="confirmResetPart()">রিসেট করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Page Modal -->
+    <div class="modal-overlay" id="modal-reset-page">
+        <div class="modal" style="max-width: 360px; text-align: center;">
+            <div class="modal-title">পাতা রিসেট</div>
+            <div class="modal-desc" style="margin-bottom: 1.5rem;">
+                আপনি কি নিশ্চিত যে আপনি এই পাতাটি রিসেট করতে চান? এতে এই পাতার সমস্ত প্রগ্রেস মুছে যাবে।
+            </div>
+            <div class="modal-actions" style="gap: 12px; margin-top: 1rem;">
+                <button class="modal-btn secondary" style="flex:1" onclick="closeResetPageModal()">বাতিল</button>
+                <button class="modal-btn primary" style="flex:1; background: #ff4757; border-color: #ff4757;" onclick="confirmResetPage()">রিসেট করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-delete-video">
+        <div class="modal" style="max-width: 400px; text-align: center;">
+            <div class="modal-title">🗑️ ভিডিও মুছুন</div>
+            <div class="modal-desc" style="margin-bottom: 1.5rem;">
+                আপনি কি নিশ্চিত যে আপনি এই ভিডিওটি এবং সমস্ত সম্পর্কিত ডেটা মুছতে চান?
+                <br><br>
+                <strong style="color: var(--red);">এটি থাম্বনেইল, ক্যাপশন এবং সমস্ত টাইপিং ডেটা মুছে ফেলবে।</strong>
+            </div>
+            <input type="hidden" id="modal-delete-vid">
+            <div class="modal-actions" style="gap: 12px; margin-top: 1rem;">
+                <button class="modal-btn secondary" style="flex:1" onclick="closeDeleteModal()">বাতিল</button>
+                <button class="modal-btn primary" style="flex:1; background: #ff4757; border-color: #ff4757;" onclick="confirmDeleteVideo()">মুছুন</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-edit-video">
+        <div class="modal" style="width: 1100px; max-width: 95vw; max-height: 92vh; display: flex; flex-direction: column;">
+            <div class="modal-title">✏️ ভিডিও সম্পাদনা</div>
+            <input type="hidden" id="modal-edit-vid">
+            <input type="hidden" id="modal-edit-channel">
+            <input type="hidden" id="modal-edit-base">
+            <div style="display: flex; flex-direction: column; gap: 20px; flex: 1; overflow: hidden; padding: 4px 0;">
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="font-size: 0.85rem; color: var(--subtext); font-weight: 600;">থাম্বনেইল</div>
+                    <div id="edit-thumb-container" style="width: 100%; max-width: 500px; aspect-ratio: 16/9; background: var(--surface2); border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid var(--border); position: relative;" onclick="document.getElementById('edit-thumb-input').click()">
+                        <img id="edit-thumb-preview" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                        <div id="edit-thumb-placeholder" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--subtext); font-size: 0.9rem;">
+                            ক্লিক করে ছবি বাছুন
+                        </div>
+                        <div style="position: absolute; bottom: 10px; right: 10px; background: var(--surface); padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; color: var(--subtext);">✏️</div>
+                    </div>
+                    <input type="file" id="edit-thumb-input" accept="image/*" style="display: none;" onchange="handleEditThumbnailSelect(event)">
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <div style="font-size: 0.85rem; color: var(--subtext); margin-bottom: 8px; font-weight: 600;">ক্যাপশন সম্পাদনা</div>
+                    <textarea id="edit-content" style="flex: 1; min-height: 400px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; padding: 16px; resize: none; line-height: 1.7;"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions" style="gap: 12px; margin-top: 16px;">
+                <button class="modal-btn secondary" style="flex:1; padding: 12px 20px;" onclick="closeEditModal()">বাতিল</button>
+                <button class="modal-btn primary" style="flex:1; padding: 12px 20px;" onclick="saveEditedVideo()">সেভ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-manual-add">
+        <div class="modal" style="width: 1100px; max-width: 95vw; max-height: 92vh; display: flex; flex-direction: column;">
+            <div class="modal-title">📝 ম্যানুয়ালি যোগ করুন</div>
+            <div style="display: flex; flex-direction: column; gap: 20px; flex: 1; overflow: hidden; padding: 4px 0;">
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="font-size: 0.85rem; color: var(--subtext); font-weight: 600;">থাম্বনেইল (ঐচ্ছিক)</div>
+                    <div id="manual-thumb-container" style="width: 100%; max-width: 500px; aspect-ratio: 16/9; background: var(--surface2); border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid var(--border); position: relative;" onclick="document.getElementById('manual-thumb-input').click()">
+                        <img id="manual-thumb-preview" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                        <div id="manual-thumb-placeholder" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--subtext); font-size: 0.9rem;">
+                            ক্লিক করে ছবি বাছুন
+                        </div>
+                        <div style="position: absolute; bottom: 10px; right: 10px; background: var(--surface); padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; color: var(--subtext);">✏️</div>
+                    </div>
+                    <input type="file" id="manual-thumb-input" accept="image/*" style="display: none;" onchange="handleManualThumbnailSelect(event)">
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <div style="font-size: 0.85rem; color: var(--subtext); margin-bottom: 8px; font-weight: 600;">বিষয়বস্তু যোগ করুন</div>
+                    <textarea id="manual-content" style="flex: 1; min-height: 400px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; padding: 16px; resize: none; line-height: 1.7;" placeholder="উদাহরণ:
+==!!Meta Data!!==
+Title: আমার গল্প
+Channel: সাহিত্য
+Source: Manual
+Upload Date: 12/03/2026
+==!!Meta Data!!==
+
+==**অধ্যায় ১**==
+==%%পাতা ১%%==
+এখানে আপনার লেখা শুরু করুন..."></textarea>
+                </div>
+            </div>
+            <div class="modal-actions" style="gap: 12px; margin-top: 16px;">
+                <button class="modal-btn secondary" style="flex:1; padding: 12px 20px;" onclick="closeManualAddModal()">বাতিল</button>
+                <button class="modal-btn primary" style="flex:1; padding: 12px 20px;" id="manual-save-btn" onclick="saveManualVideo()">সেভ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-url">
+        <div class="modal">
+            <div class="modal-title">▶ YouTube ভিডিও যোগ করুন</div>
+            <div style="margin-bottom:1rem;">
+                <div class="url-modal-step" id="step1">
+                    <div class="step-dot">১</div>
+                    <span>YouTube লিংক দিন</span>
+                </div>
+                <div class="url-modal-step" id="step2">
+                    <div class="step-dot">২</div>
+                    <span>Caption ডাউনলোড হচ্ছে</span>
+                </div>
+                <div class="url-modal-step" id="step3">
+                    <div class="step-dot">৩</div>
+                    <span>ফরম্যাট করা হচ্ছে</span>
+                </div>
+                <div class="url-modal-step" id="step4">
+                    <div class="step-dot">৪</div>
+                    <span>সম্পন্ন!</span>
+                </div>
+            </div>
+
+            <input class="modal-input" id="url-input" placeholder="https://www.youtube.com/watch?v=..."
+                oninput="clearUrlError()" onkeydown="if(event.key==='Enter')processUrl()">
+
+            <div class="progress-log" id="progress-log" style="display:none"></div>
+            <div class="modal-status" id="url-status"></div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" id="url-cancel-btn" onclick="closeUrlModal()">বাতিল</button>
+                <button class="modal-btn primary" id="url-process-btn" onclick="processUrl()">শুরু করুন →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="modal-settings">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-title">⚙️ সেটিংস (Settings)</div>
+            <div class="modal-desc">
+                অ্যাপ্লিকেশনের ডেটা ফোল্ডার পরিবর্তন করুন। পরিবর্তন কার্যকর করতে অ্যাপটি রিস্টার্ট করতে হতে পারে।
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <div style="font-size: 0.8rem; color: var(--subtext); margin-bottom: 8px; font-weight: 600;">বর্তমান ডেটা ফোল্ডার:</div>
+                <div id="settings-data-dir-path" style="background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text); word-break: break-all; line-height: 1.4;">
+                    লোড হচ্ছে...
+                </div>
+            </div>
+
+            <div class="modal-actions" style="gap: 12px;">
+                <button class="modal-btn secondary" style="flex:1" onclick="closeSettingsModal()">বন্ধ করুন</button>
+                <button class="modal-btn primary" style="flex:1" onclick="changeDataDirectory()">ফোল্ডার পরিবর্তন করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-yt-summary">
+        <div class="modal"
+            style="width: 100%; max-width: 550px; padding: 0; overflow: hidden; background: var(--surface2);">
+            <!-- Header Header with Backdrop/Cover -->
+            <div id="yt-summary-cover"
+                style="height: 140px; background: var(--surface); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border);">
+                <!-- Blurred background image or pattern here if desired -->
+                <div id="yt-summary-thumb-bg"
+                    style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.15; filter: blur(20px); background-size: cover; background-position: center;">
+                </div>
+
+                <div
+                    style="position: relative; z-index: 10; display: flex; align-items: center; gap: 1.5rem; width: 100%; padding: 0 1.5rem;">
+                    <div id="yt-summary-thumb-container"
+                        style="width: 160px; height: 90px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.3); flex-shrink: 0; background: var(--surface);">
+                        <!-- Thumbnail inserted here -->
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div id="yt-summary-title"
+                            style="font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            Video Title</div>
+                        <div id="yt-summary-channel" style="font-size: 0.85rem; color: var(--subtext);">Channel Name
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 1.5rem 1.5rem 1.5rem;">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <div
+                        style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--correct); font-weight: 700; margin-bottom: 0.3rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <span style="height: 1px; width: 20px; background: var(--correct); opacity: 0.4;"></span>
+                        ভিডিও রিপোর্ট
+                        <span style="height: 1px; width: 20px; background: var(--correct); opacity: 0.4;"></span>
+                    </div>
+                </div>
+
+                <div id="yt-summary-best-msg"
+                    style="text-align: center; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; min-height: 1.2rem;">
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 1.2rem;">
+                    <div style="background: var(--surface2); padding: 0.8rem; text-align: center;">
+                        <div
+                            style="font-size: 0.6rem; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">
+                            গড় শব্দ/মিনিট</div>
+                        <div id="yt-summary-wpm" style="font-size: 1.3rem; font-weight: 800; color: var(--accent);">0
+                        </div>
+                    </div>
+                    <div style="background: var(--surface2); padding: 0.8rem; text-align: center;">
+                        <div
+                            style="font-size: 0.6rem; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">
+                            গড় সঠিকতা</div>
+                        <div id="yt-summary-acc" style="font-size: 1.3rem; font-weight: 800; color: var(--correct);">0%
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Part List Container -->
+                <div
+                    style="background: var(--surface); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; max-height: 180px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                        <thead
+                            style="position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--border); z-index: 5;">
+                            <tr>
+                                <th
+                                    style="text-align: left; padding: 8px 12px; color: var(--subtext); font-weight: 500;">
+                                    চ্যাপ্টার</th>
+                                <th
+                                    style="text-align: center; padding: 8px 12px; color: var(--subtext); font-weight: 500;">
+                                    WPM</th>
+                                <th
+                                    style="text-align: center; padding: 8px 12px; color: var(--subtext); font-weight: 500;">
+                                    সঠিকতা</th>
+                            </tr>
+                        </thead>
+                        <tbody id="yt-summary-parts-list">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 1.2rem; display: flex; justify-content: center;">
+                    <button class="modal-btn primary" onclick="closeYTSummary()"
+                        style="min-width: 120px; padding: 0.7rem 1.5rem; border-radius: 25px; font-weight: 700;">ঠিক
+                        আছে</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- SELECTION MODE TOOLBAR (fixed bottom) -->
+    <div class="selection-toolbar" id="selection-toolbar" style="display:none;">
+        <div class="selection-toolbar-inner">
+            <div class="selection-info">
+                <span class="selection-count-badge" id="selection-count">0</span>
+                <span class="selection-label">টি ভিডিও নির্বাচিত</span>
+            </div>
+            <div class="selection-actions">
+                <button class="modal-btn secondary" onclick="clearSelection()" style="min-width: 90px;">বাতিল</button>
+                <button class="modal-btn primary" onclick="openAddToPlaylistModal()" id="btn-add-to-playlist" style="min-width: 180px;">🎵 প্লেলিস্টে যোগ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Create New Playlist -->
+    <div class="modal-overlay" id="modal-new-playlist">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-title">🎵 নতুন প্লেলিস্ট তৈরি করুন</div>
+            <div class="modal-desc" style="margin-bottom: 1.5rem;">নির্বাচিত ভিডিওগুলো এই নতুন প্লেলিস্টে যোগ হবে।</div>
+            <input class="modal-input" id="new-playlist-name-input" placeholder="প্লেলিস্টের নাম লিখুন..." maxlength="100">
+            <div class="modal-actions" style="gap: 12px; margin-top: 0.5rem;">
+                <button class="modal-btn secondary" onclick="closeModal('modal-new-playlist')" style="flex: 1;">বাতিল</button>
+                <button class="modal-btn primary" onclick="createNewPlaylist()" style="flex: 1;">তৈরি করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Add to Existing Playlist -->
+    <div class="modal-overlay" id="modal-add-to-playlist">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-title">🎵 প্লেলিস্টে যোগ করুন</div>
+            <div class="modal-desc" style="margin-bottom: 1rem;">একটি বিদ্যমান প্লেলিস্ট নির্বাচন করুন অথবা নতুন তৈরি করুন।</div>
+            <div id="existing-playlists-list" style="max-height: 280px; overflow-y: auto; margin-bottom: 1rem;">
+                <!-- populated by JS -->
+            </div>
+            <div class="modal-actions" style="gap: 12px; justify-content: space-between;">
+                <button class="modal-btn secondary" onclick="closeModal('modal-add-to-playlist')">বাতিল</button>
+                <button class="modal-btn" onclick="switchToNewPlaylistModal()" style="border-color: var(--accent); color: var(--accent);">＋ নতুন প্লেলিস্ট</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Edit Playlist -->
+    <div class="modal-overlay" id="modal-edit-playlist">
+        <div class="modal" style="width: 500px; max-width: 95vw; display: flex; flex-direction: column;">
+            <div class="modal-title">✏️ প্লেলিস্ট সম্পাদনা</div>
+            <input type="hidden" id="edit-playlist-id">
+            
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 1rem;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 0.85rem; color: var(--subtext); font-weight: 600;">থাম্বনেইল (ঐচ্ছিক)</div>
+                    <div id="edit-pl-thumb-container" style="width: 100%; aspect-ratio: 16/9; background: var(--surface2); border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid var(--border); position: relative;" onclick="document.getElementById('edit-pl-thumb-input').click()">
+                        <img id="edit-pl-thumb-preview" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                        <div id="edit-pl-thumb-placeholder" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--subtext); font-size: 0.9rem;">
+                            ক্লিক করে ছবি বাছুন
+                        </div>
+                        <div style="position: absolute; bottom: 10px; right: 10px; background: var(--surface); padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; color: var(--subtext);">✏️</div>
+                    </div>
+                    <input type="file" id="edit-pl-thumb-input" accept="image/*" style="display: none;" onchange="handleEditPlaylistThumbnailSelect(event)">
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 0.85rem; color: var(--subtext); font-weight: 600;">প্লেলিস্টের নাম</div>
+                    <input class="modal-input" id="edit-playlist-name-input" placeholder="নতুন নাম লিখুন..." maxlength="100">
+                </div>
+            </div>
+
+            <div class="modal-actions" style="gap: 12px; margin-top: 1.5rem;">
+                <button class="modal-btn secondary" onclick="closeModal('modal-edit-playlist')" style="flex: 1;">বাতিল</button>
+                <button class="modal-btn primary" onclick="confirmEditPlaylist()" style="flex: 1;">সেভ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="yt-toast-container"></div>
+
+    <!-- ══════════════════════════════════════
+     JAVASCRIPT LOGIC
+══════════════════════════════════════ -->
+    <!-- ══════════════════════════════════════
+     MODAL (Instant Mode Results)
+    ══════════════════════════════════════ -->
+    <div class="modal-overlay" id="modal-inst-results">
+        <div class="modal">
+            <div class="res-top">
+                <div class="res-main-stats">
+                    <div class="res-stat-group">
+                        <div class="res-label">wpm</div>
+                        <div class="res-val-big" id="res-wpm">0</div>
+                    </div>
+                    <div class="res-stat-group">
+                        <div class="res-label">acc</div>
+                        <div class="res-val-big" id="res-acc">0%</div>
+                    </div>
+                </div>
+                <div class="res-chart-placeholder">
+                    <canvas id="instWpmChart"></canvas>
+                </div>
+            </div>
+
+            <div class="res-bottom">
+                <div class="res-stat-group" style="align-items: flex-start;">
+                    <div class="res-label">test type</div>
+                    <div class="res-accent-text" style="text-align:left">instant<br>bengali</div>
+                </div>
+                <div class="res-stat-group">
+                    <div class="res-label">raw</div>
+                    <div class="res-val" id="res-raw">0</div>
+                </div>
+                <div class="res-stat-group" title="correct, incorrect, extra, missed">
+                    <div class="res-label">characters</div>
+                    <div
+                        style="display:flex; align-items:flex-start; gap:0.5rem; font-size:1.6rem; color:var(--accent); font-family:'JetBrains Mono', monospace; line-height: 1; padding-top: 5px;">
+                        <div style="display:flex; flex-direction:column; align-items:center;">
+                            <span style="font-size:0.75rem; color:var(--subtext); margin-bottom: 2px;">correct</span>
+                            <span id="res-char-c">0</span>
+                        </div>
+                        <div style="color:var(--surface2); font-weight:300; margin-top:12px;">/</div>
+                        <div style="display:flex; flex-direction:column; align-items:center;">
+                            <span style="font-size:0.75rem; color:var(--subtext); margin-bottom: 2px;">incorrect</span>
+                            <span id="res-char-i">0</span>
+                        </div>
+                        <div style="color:var(--surface2); font-weight:300; margin-top:12px;">/</div>
+                        <div style="display:flex; flex-direction:column; align-items:center;">
+                            <span style="font-size:0.75rem; color:var(--subtext); margin-bottom: 2px;">extra</span>
+                            <span id="res-char-e">0</span>
+                        </div>
+                        <div style="color:var(--surface2); font-weight:300; margin-top:12px;">/</div>
+                        <div style="display:flex; flex-direction:column; align-items:center;">
+                            <span style="font-size:0.75rem; color:var(--subtext); margin-bottom: 2px;">missed</span>
+                            <span id="res-char-m">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="res-stat-group">
+                    <div class="res-label">consistency</div>
+                    <div class="res-val" id="res-cons">0%</div>
+                </div>
+                <div class="res-stat-group">
+                    <div class="res-label">time</div>
+                    <div class="res-val" id="res-time">0s</div>
+                </div>
+            </div>
+
+            <div class="res-actions">
+                <button class="res-btn" onclick="resNewText()"><span>↺</span> নতুন</button>
+                <button class="res-btn" onclick="resResetText()"><span>⟳</span> রিসেট</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desktop app bridge (must load before app.js) -->
+    <script src="static/js/tauri-bridge.js"></script>
+    <!-- Modular JS -->
+    <script src="static/js/app.js"></script>
+    <script src="static/js/playlist.js"></script>
+</body>
+
+</html>

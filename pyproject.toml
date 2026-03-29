@@ -1,0 +1,14 @@
+[project]
+name = "bangla-typer"
+version = "1.0.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.135.1",
+    "pillow>=10.0.0",
+    "pyinstaller>=6.19.0",
+    "uvicorn>=0.41.0",
+    "yt-dlp>=2026.3.3",
+]
+

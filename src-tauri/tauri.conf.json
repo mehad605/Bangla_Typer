@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicehash/tauri-schema/v2/schema.json",
+  "productName": "Bangla Typer",
+  "version": "1.0.0",
+  "identifier": "com.bangla-typer.desktop",
+  "build": {
+    "frontendDist": "../static",
+    "devUrl": "http://127.0.0.1:8000",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Bangla Typer",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "decorations": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' http://127.0.0.1:8000; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://127.0.0.1:8000; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: http://127.0.0.1:8000; connect-src 'self' http://127.0.0.1:8000 ws://127.0.0.1:8000"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.svg"
+    ],
+    "externalBin": [
+      "server/bangla-typer-server"
+    ],
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ]
+      }
+    }
+  },
+  "plugins": {}
+}
