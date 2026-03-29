@@ -71,10 +71,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
-          cache: npm
 
       - name: Install Node.js dependencies
-        run: npm ci || npm install
+        run: npm install
 
       # ── Python + Sidecar ─────────────────────────────────────────────
       - name: Setup Python
