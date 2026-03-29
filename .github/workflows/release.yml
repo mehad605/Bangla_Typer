@@ -159,7 +159,7 @@ jobs:
           done
 
           mkdir -p dist
-          tar czf "dist/${APP_NAME}-${VERSION}-portable.tar.gz" \
+          tar czf "dist/${APP_NAME}-${VERSION}.tar.gz" \
             -C pkgdir "${APP_NAME}-${VERSION}"
           rm -rf pkgdir
 
