@@ -277,7 +277,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Create GitHub Release
-        uses: softprops/gh-release@v2
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VERSION || inputs.version }}
           name: Bangla Typer ${{ env.VERSION || inputs.version }}
