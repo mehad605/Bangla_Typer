@@ -98,7 +98,7 @@ jobs:
             EXT=""
           fi
 
-          python -m PyInstaller \
+          uv run python -m PyInstaller \
             --noconfirm \
             --onefile \
             --name "${{ env.APP_NAME }}-server" \
@@ -137,7 +137,7 @@ jobs:
           APP_NAME="${{ env.APP_NAME }}"
           VERSION="${{ env.VERSION }}"
           if [[ -z "$VERSION" ]]; then
-            VERSION=$(python -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])")
+            VERSION=$(uv run python -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])")
           fi
           RAW_NAME="Bangla Typer"
           TARGET_BIN="src-tauri/target/release/${APP_NAME}"
