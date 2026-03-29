@@ -36,8 +36,14 @@ pub fn run() {
             let is_dev = cfg!(debug_assertions);
 
             if !is_dev {
+                // Find a free port dynamically
+                let port = portpicker::pick_unused_port().unwrap_or(8000);
+                let url = format!("http://127.0.0.1:{}", port);
+
                 let shell = app.shell();
-                let sidecar_command = shell.sidecar("bangla-typer-server")?;
+                let sidecar_command = shell.sidecar("bangla-typer-server")?
+                    .args(["--port", &port.to_string()]); // Pass port to Python backend
+                
                 let (_rx, child) = sidecar_command.spawn()?;
                 app.manage(SidecarChild(Mutex::new(Some(child))));
 
@@ -52,8 +58,8 @@ pub fn run() {
 
                 let window_clone = window.clone();
                 std::thread::spawn(move || {
-                    if wait_for_server("http://127.0.0.1:8000", 30) {
-                        let _ = window_clone.navigate("http://127.0.0.1:8000".parse().unwrap());
+                    if wait_for_server(&url, 30) {
+                        let _ = window_clone.navigate(url.parse().unwrap());
                     }
                 });
             }
