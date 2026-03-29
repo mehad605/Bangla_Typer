@@ -2,15 +2,13 @@
   "identifier": "default",
   "description": "Default capability for the main window",
   "windows": ["main"],
+  "remote": {
+    "urls": ["http://127.0.0.1:*"]
+  },
   "permissions": [
     "core:default",
-    "core:window:allow-close",
-    "core:window:allow-minimize",
-    "core:window:allow-set-fullscreen",
-    "core:window:allow-is-fullscreen",
-    "core:window:allow-start-dragging",
-    "dialog:allow-open",
-    "dialog:allow-ask",
+    "core:window:default",
+    "dialog:default",
     "shell:allow-spawn",
     "shell:allow-kill"
   ]

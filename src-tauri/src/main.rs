@@ -5,13 +5,6 @@ use tauri_plugin_shell::{process::CommandChild, ShellExt};
 
 struct SidecarChild(Mutex<Option<CommandChild>>);
 
-#[tauri::command]
-fn select_folder(app: tauri::AppHandle) -> Option<String> {
-    use tauri_plugin_dialog::{DialogExt, FilePath};
-    let path: Option<FilePath> = app.dialog().file().blocking_pick_folder();
-    path.map(|p| p.to_string())
-}
-
 fn wait_for_server(url: &str, timeout_secs: u64) -> bool {
     let timeout = Duration::from_secs(timeout_secs);
     let start = std::time::Instant::now();
@@ -79,7 +72,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![select_folder])
+        .invoke_handler(tauri::generate_handler![])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
