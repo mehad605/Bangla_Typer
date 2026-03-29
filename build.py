@@ -149,16 +149,16 @@ def build_tauri() -> None:
     """Build the final Tauri application."""
     logging.info("--- Building Frontend & Bundling Tauri App ---")
 
-    npm_cmd = shutil.which("npm")
-    if not npm_cmd:
-        logging.error("npm is not installed or not in PATH.")
+    npx_cmd = shutil.which("npx")
+    if not npx_cmd:
+        logging.error("npx is not installed or not in PATH.")
         sys.exit(1)
 
     # Set safe bundle targets per platform to prevent failures
     bundles = "deb,rpm" if sys.platform == "linux" else "msi,nsis"
 
-    # We pass the arguments to the npm script via --
-    cmd = [npm_cmd, "run", "build", "--", "--bundles", bundles]
+    # Use npx directly as it passes arguments strictly and without shell interference
+    cmd = [npx_cmd, "tauri", "build", "--bundles", bundles]
     run_command(cmd, cwd=PROJECT_ROOT)
 
 
