@@ -162,11 +162,11 @@ def build_tauri():
     """Build the Tauri application. Continues even if some bundle formats fail."""
     print("\n--- Building Tauri Application ---")
 
-    result = subprocess.run(
-        ["cargo", "tauri", "build"],
-        cwd=PROJECT_ROOT,
-        text=True,
-    )
+    # Use the npm-installed tauri CLI
+    tauri_cli = PROJECT_ROOT / "node_modules" / ".bin" / "tauri"
+    cmd = [str(tauri_cli), "build"] if tauri_cli.exists() else ["npx", "tauri", "build"]
+
+    result = subprocess.run(cmd, cwd=PROJECT_ROOT, text=True)
     if result.returncode != 0:
         print("[WARN] Some bundle formats may have failed (e.g. AppImage).")
         print("       Checking for successfully built packages...")
