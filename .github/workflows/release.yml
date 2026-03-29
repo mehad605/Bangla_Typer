@@ -1,0 +1,285 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g., 1.2.3). Leave empty to build without publishing."
+        required: false
+        type: string
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: bangla-typer
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      # ── Source ───────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Version ──────────────────────────────────────────────────────
+      - name: Determine version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          elif [[ -n "${{ inputs.version }}" ]]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          fi
+
+      # ── Linux system dependencies ────────────────────────────────────
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libfuse2
+
+      # ── Rust ─────────────────────────────────────────────────────────
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # ── Node.js ──────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: npm
+
+      - name: Install Node.js dependencies
+        run: npm ci || npm install
+
+      # ── Python + Sidecar ─────────────────────────────────────────────
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install Python dependencies
+        run: uv sync
+
+      - name: Build sidecar binary
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            SEP=";"
+            EXT=".exe"
+          else
+            SEP=":"
+            EXT=""
+          fi
+
+          python -m PyInstaller \
+            --noconfirm \
+            --onefile \
+            --name "${{ env.APP_NAME }}-server" \
+            --hidden-import uvicorn \
+            --hidden-import fastapi \
+            --add-data "app${SEP}app" \
+            --add-data "scripts${SEP}scripts" \
+            --add-data "static${SEP}static" \
+            sidecar.py
+
+          # Place the sidecar where Tauri expects it
+          mkdir -p src-tauri/server
+          TARGET="${{ matrix.target }}"
+          mv "dist/${{ env.APP_NAME }}-server${EXT}" \
+             "src-tauri/server/${{ env.APP_NAME }}-server-${TARGET}${EXT}"
+          chmod +x "src-tauri/server/${{ env.APP_NAME }}-server-${TARGET}${EXT}" 2>/dev/null || true
+
+      # ── Tauri application build ──────────────────────────────────────
+      - name: Build Tauri application
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ env.VERSION && format('v{0}', env.VERSION) || '' }}
+          releaseName: ${{ env.VERSION && format('v{0}', env.VERSION) || '' }}
+          releaseDraft: false
+          prerelease: ${{ contains(env.VERSION, '-') }}
+          includeDebug: false
+          includeRelease: true
+
+      # ── AppImage (Linux only) ────────────────────────────────────────
+      - name: Build AppImage (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          APP_NAME="${{ env.APP_NAME }}"
+          VERSION="${{ env.VERSION:-$(python -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])") }}"
+          RAW_NAME="Bangla Typer"
+          TARGET_BIN="src-tauri/target/release/${APP_NAME}"
+
+          if [[ ! -f "${TARGET_BIN}" ]]; then
+            echo "::warning::Release binary not found at ${TARGET_BIN}, skipping AppImage"
+            exit 0
+          fi
+
+          # Download appimagetool
+          if [[ ! -f appimagetool ]]; then
+            curl -fsSL \
+              -o appimagetool \
+              "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+            chmod +x appimagetool
+          fi
+
+          # Assemble AppDir
+          rm -rf AppDir
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
+
+          cp "${TARGET_BIN}" "AppDir/usr/bin/${APP_NAME}"
+          chmod 755 "AppDir/usr/bin/${APP_NAME}"
+
+          # Copy sidecar
+          for f in src-tauri/server/*; do
+            if [[ -f "${f}" && "$(basename ${f})" == ${APP_NAME}-server* ]]; then
+              cp "${f}" "AppDir/usr/bin/${APP_NAME}-server"
+              chmod 755 "AppDir/usr/bin/${APP_NAME}-server"
+              break
+            fi
+          done
+
+          # Icons
+          ICON_SRC="src-tauri/icons/icon.svg"
+          if [[ -f "${ICON_SRC}" ]]; then
+            cp "${ICON_SRC}" "AppDir/usr/share/icons/hicolor/scalable/apps/${APP_NAME}.svg"
+            cp "${ICON_SRC}" "AppDir/${APP_NAME}.svg"
+          fi
+
+          # Desktop entry
+          cat > "AppDir/usr/share/applications/${APP_NAME}.desktop" << DESKTOP
+          [Desktop Entry]
+          Name=${RAW_NAME}
+          Exec=${APP_NAME}
+          Icon=${APP_NAME}
+          Terminal=false
+          Type=Application
+          Categories=Utility;
+          DESKTOP
+
+          cp "AppDir/usr/share/applications/${APP_NAME}.desktop" "AppDir/${APP_NAME}.desktop"
+
+          # AppRun symlink
+          ln -sf "usr/bin/${APP_NAME}" "AppDir/AppRun"
+
+          # Build AppImage
+          mkdir -p dist
+          APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool \
+            --no-appstream \
+            AppDir \
+            "dist/${APP_NAME}-${VERSION}-x86_64.AppImage"
+
+          rm -rf AppDir
+
+      # ── Collect artifacts ────────────────────────────────────────────
+      - name: List build artifacts
+        shell: bash
+        run: |
+          echo "::group::dist/ contents"
+          ls -lh dist/ 2>/dev/null || echo "(empty)"
+          echo "::endgroup::"
+
+          echo "::group::Tauri bundles"
+          find src-tauri/target/release/bundle -type f 2>/dev/null || echo "(none)"
+          echo "::endgroup::"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.target }}
+          path: dist/*
+          retention-days: 30
+
+      # ── Checksums ────────────────────────────────────────────────────
+      - name: Generate checksums
+        shell: bash
+        working-directory: dist
+        run: |
+          if compgen -G "*" > /dev/null; then
+            sha256sum * > SHA256SUMS
+            echo "::group::SHA256 checksums"
+            cat SHA256SUMS
+            echo "::endgroup::"
+          fi
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums-${{ matrix.target }}
+          path: dist/SHA256SUMS
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────────────
+  #  Publish a GitHub Release from the built artifacts
+  # ──────────────────────────────────────────────────────────────────────
+  release:
+    needs: build
+    if: >-
+      (github.event_name == 'push' && github.ref_type == 'tag') ||
+      (github.event_name == 'workflow_dispatch' && inputs.version != '')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Stage release files
+        shell: bash
+        run: |
+          mkdir -p release
+          find artifacts -type f \( \
+            -name "*.deb" -o \
+            -name "*.rpm" -o \
+            -name "*.AppImage" -o \
+            -name "*.msi" -o \
+            -name "*.exe" -o \
+            -name "*.tar.gz" -o \
+            -name "SHA256SUMS" \
+          \) -exec cp {} release/ \;
+
+          echo "::group::Release assets"
+          ls -lh release/
+          echo "::endgroup::"
+
+      - name: Create GitHub Release
+        uses: softprops/gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION || inputs.version }}
+          name: Bangla Typer ${{ env.VERSION || inputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(env.VERSION || inputs.version, '-') }}
+          files: release/*
