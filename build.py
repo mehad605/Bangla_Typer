@@ -280,7 +280,7 @@ def collect_artifacts(app_name: str, version: str) -> None:
     # 3. Create a generic portable tarball for Linux/macOS containing the raw binaries
     target_bin = SRC_TAURI / "target" / "release" / app_name
     if target_bin.exists() and sys.platform != "win32":
-        portable_name = f"{app_name}-{version}-portable.tar.gz"
+        portable_name = f"{app_name}-{version}.tar.gz"
         portable_path = DIST_DIR / portable_name
 
         with tarfile.open(portable_path, "w:gz") as tar:

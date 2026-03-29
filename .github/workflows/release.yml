@@ -130,7 +130,7 @@ jobs:
           includeRelease: true
 
       # ── Portable tarball (Linux only) ───────────────────────────────
-      - name: Create portable tarball (Linux)
+      - name: Create tarball (Linux)
         if: runner.os == 'Linux'
         shell: bash
         run: |
@@ -142,7 +142,7 @@ jobs:
 
           TARGET_BIN="src-tauri/target/release/${APP_NAME}"
           if [[ ! -f "${TARGET_BIN}" ]]; then
-            echo "::warning::Release binary not found, skipping portable tarball"
+            echo "::warning::Release binary not found, skipping tarball"
             exit 0
           fi
 
