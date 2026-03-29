@@ -1,8 +1,0 @@
-Package: bangla-typer
-Version: 1.0.0
-Section: utils
-Priority: optional
-Architecture: amd64
-Maintainer: Maruf <maruf@example.com>
-Description: A modern Bangla typing trainer and YouTube subtitle processor.
- Practice typing with real content and YouTube subtitles.

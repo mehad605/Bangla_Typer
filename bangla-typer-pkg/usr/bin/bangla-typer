@@ -1,3 +1,0 @@
-#!/bin/bash
-# Standard launcher for the Debian package
-exec /opt/bangla-typer/bangla-typer "$@"

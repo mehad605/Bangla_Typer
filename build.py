@@ -1,113 +1,118 @@
+#!/usr/bin/env python3
 import os
 import sys
+import json
 import shutil
-import platform
-import subprocess
+import logging
 import tarfile
-import re
+import subprocess
+import urllib.request
 from pathlib import Path
 
-# --- Configuration ---
-PROJECT_ROOT = Path(__file__).parent.absolute()
+# Configure structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
 
-
-def get_version_from_pyproject():
-    try:
-        with open(PROJECT_ROOT / "pyproject.toml", "r") as f:
-            content = f.read()
-            match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
-            if match:
-                return match.group(1)
-    except Exception as e:
-        print(f"Warning: Could not read version from pyproject.toml: {e}")
-    return "1.0.0"
-
-
-VERSION = get_version_from_pyproject()
-APP_NAME = "bangla-typer"
+# Robust path resolution, avoiding any hardcoded directories
+PROJECT_ROOT = Path(__file__).resolve().parent
+SRC_TAURI = PROJECT_ROOT / "src-tauri"
 DIST_DIR = PROJECT_ROOT / "dist"
-SIDE_DIR = PROJECT_ROOT / "src-tauri" / "server"
+SERVER_DIR = SRC_TAURI / "server"
 
 
-def get_target_triple():
-    """Get the Rust target triple for the current platform."""
-    machine = platform.machine().lower()
-    system = platform.system().lower()
-
-    if system == "linux":
-        if machine in ("x86_64", "amd64"):
-            return "x86_64-unknown-linux-gnu"
-        elif machine in ("aarch64", "arm64"):
-            return "aarch64-unknown-linux-gnu"
-    elif system == "windows":
-        if machine in ("x86_64", "amd64"):
-            return "x86_64-pc-windows-msvc"
-    elif system == "darwin":
-        if machine in ("x86_64", "amd64"):
-            return "x86_64-apple-darwin"
-        elif machine in ("aarch64", "arm64"):
-            return "aarch64-apple-darwin"
-
-    print(
-        f"Warning: Unknown platform {system}/{machine}, defaulting to x86_64-unknown-linux-gnu"
+def get_rust_target() -> str:
+    """Dynamically retrieve the host Rust target triple."""
+    logging.info("Detecting Rust target triple...")
+    result = subprocess.run(
+        ["rustc", "-vV"], capture_output=True, text=True, check=True
     )
-    return "x86_64-unknown-linux-gnu"
+    for line in result.stdout.splitlines():
+        if line.startswith("host:"):
+            target = line.split(" ")[1].strip()
+            logging.info(f"Target detected: {target}")
+            return target
+    raise RuntimeError("Could not determine Rust host target")
 
 
-def run(cmd, cwd=None, env=None):
-    print(f"  > {' '.join(str(c) for c in cmd)}")
-    result = subprocess.run(cmd, cwd=cwd, env=env, text=True)
-    if result.returncode != 0:
-        print(f"Error: Command failed with exit code {result.returncode}")
-        sys.exit(result.returncode)
+def get_app_info() -> tuple[str, str, str]:
+    """Extract app name and version dynamically from Tauri config."""
+    tauri_conf_path = SRC_TAURI / "tauri.conf.json"
+    with open(tauri_conf_path, "r", encoding="utf-8") as f:
+        conf = json.load(f)
+
+    raw_name = conf.get("productName", "App")
+    name = raw_name.lower().replace(" ", "-")
+    version = conf.get("version", "1.0.0")
+    return name, raw_name, version
 
 
-def tool_available(name):
-    return shutil.which(name) is not None
-
-
-def validate_environment():
-    print("--- Validating Build Environment ---")
-    errors = []
-
-    required_files = [
-        "sidecar.py",
-        "app/__init__.py",
-        "app/main.py",
-        "src-tauri/Cargo.toml",
-        "src-tauri/tauri.conf.json",
-    ]
-    for f in required_files:
-        if not (PROJECT_ROOT / f).exists():
-            errors.append(f"Required file not found: {f}")
-
-    required_dirs = ["app", "static", "scripts", "src-tauri"]
-    for d in required_dirs:
-        if not (PROJECT_ROOT / d).exists():
-            errors.append(f"Required directory not found: {d}")
-
-    if not tool_available("cargo"):
-        errors.append(
-            "Rust toolchain (cargo) not found. Install from https://rustup.rs"
+def run_command(
+    cmd: list[str],
+    cwd: Path | None = None,
+    env: dict | None = None,
+    capture_output=False,
+) -> subprocess.CompletedProcess:
+    """Run a shell command with strict error handling."""
+    logging.info(f"Executing: {' '.join(str(c) for c in cmd)}")
+    try:
+        return subprocess.run(
+            cmd, cwd=cwd, env=env, check=True, text=True, capture_output=capture_output
         )
+    except subprocess.CalledProcessError as e:
+        logging.error(
+            f"Command failed with exit code {e.returncode}: {' '.join(str(c) for c in cmd)}"
+        )
+        if capture_output and e.stderr:
+            logging.error(f"Error output: {e.stderr}")
+        sys.exit(e.returncode)
 
-    if errors:
-        print("[ERROR] Build environment validation failed:")
-        for error in errors:
-            print(f"  - {error}")
+
+def validate_environment() -> None:
+    """Ensure all required build tools and directories exist."""
+    required_tools = ["rustc", "cargo", sys.executable]
+    for tool in required_tools:
+        if not shutil.which(tool):
+            logging.error(f"Missing required build tool: {tool}")
+            sys.exit(1)
+
+    # Check for tauri cli (local or global)
+    tauri_local = PROJECT_ROOT / "node_modules" / ".bin" / "tauri"
+    if not tauri_local.exists() and not shutil.which("npx"):
+        logging.error(
+            "Tauri CLI not found. Ensure 'npm install' was run or 'npx' is available."
+        )
         sys.exit(1)
 
-    print(f"[OK] Build environment valid (Version: {VERSION})")
 
+def build_sidecar(target_triple: str, app_name: str) -> None:
+    """Compile the Python backend into a standalone binary."""
+    logging.info("--- Building Python Backend (Sidecar) ---")
 
-def build_sidecar():
-    """Build the Python sidecar binary using PyInstaller."""
-    print("\n--- Building Python Sidecar ---")
+    SERVER_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Ensure scripts is a package
-    (PROJECT_ROOT / "scripts" / "__init__.py").touch()
+    # Tauri expects sidecars to have the exact target triple suffix
+    sidecar_base_name = f"{app_name}-server"
+    exe_ext = ".exe" if sys.platform == "win32" else ""
+    sidecar_filename = f"{sidecar_base_name}-{target_triple}{exe_ext}"
 
-    run(
+    # Identify extra data directories automatically
+    data_args = []
+    for d in ["app", "scripts", "static"]:
+        if (PROJECT_ROOT / d).exists():
+            separator = ";" if sys.platform == "win32" else ":"
+            data_args.extend(["--add-data", f"{d}{separator}{d}"])
+
+    # Clean up previous pyinstaller artifacts to prevent stale builds
+    for d in ["build", "dist"]:
+        path = PROJECT_ROOT / d
+        if path.exists():
+            shutil.rmtree(path)
+
+    # Compile with PyInstaller
+    cmd = (
         [
             sys.executable,
             "-m",
@@ -115,143 +120,209 @@ def build_sidecar():
             "--noconfirm",
             "--onefile",
             "--name",
-            "bangla-typer-server",
-            "--add-data",
-            "app:app",
-            "--add-data",
-            "scripts:scripts",
-            "--add-data",
-            "static:static",
+            sidecar_base_name,
             "--hidden-import",
             "uvicorn",
             "--hidden-import",
             "fastapi",
-            "sidecar.py",
-        ],
-        cwd=PROJECT_ROOT,
+        ]
+        + data_args
+        + ["sidecar.py"]
     )
 
-    # Find the built sidecar
-    if platform.system().lower() == "windows":
-        sidecar_name = "bangla-typer-server.exe"
-    else:
-        sidecar_name = "bangla-typer-server"
+    run_command(cmd, cwd=PROJECT_ROOT)
 
-    built_sidecar = PROJECT_ROOT / "dist" / sidecar_name
-    if not built_sidecar.exists():
-        print(f"Error: Sidecar binary not found at {built_sidecar}")
+    # Relocate the binary to where Tauri expects it
+    built_bin = PROJECT_ROOT / "dist" / f"{sidecar_base_name}{exe_ext}"
+    dest_bin = SERVER_DIR / sidecar_filename
+
+    if built_bin.exists():
+        shutil.move(built_bin, dest_bin)
+        dest_bin.chmod(0o755)
+        logging.info(f"Successfully compiled backend into: {dest_bin}")
+    else:
+        logging.error("Backend binary was not generated by PyInstaller.")
         sys.exit(1)
 
-    # Copy to Tauri sidecar directory with target triple suffix
-    target = get_target_triple()
-    sidecar_ext = ".exe" if platform.system().lower() == "windows" else ""
-    sidecar_target_name = f"bangla-typer-server-{target}{sidecar_ext}"
+    # Clean the dist directory created by pyinstaller to prepare for final outputs
+    shutil.rmtree(PROJECT_ROOT / "dist", ignore_errors=True)
 
-    SIDE_DIR.mkdir(parents=True, exist_ok=True)
-    dest = SIDE_DIR / sidecar_target_name
-    shutil.copy2(built_sidecar, dest)
-    dest.chmod(0o755)
 
-    print(
-        f"[OK] Sidecar built: {dest} ({built_sidecar.stat().st_size / 1024 / 1024:.1f} MB)"
+def build_tauri() -> None:
+    """Build the final Tauri application."""
+    logging.info("--- Building Frontend & Bundling Tauri App ---")
+
+    tauri_bin = PROJECT_ROOT / "node_modules" / ".bin" / "tauri"
+    cmd = [str(tauri_bin), "build"] if tauri_bin.exists() else ["npx", "tauri", "build"]
+
+    run_command(cmd, cwd=PROJECT_ROOT)
+
+
+def build_appimage_manual(app_name: str, raw_name: str, version: str) -> None:
+    """Manually build an AppImage without using Tauri's internal linuxdeploy (which frequently fails on modern distros)."""
+    if sys.platform != "linux":
+        return
+
+    logging.info("--- Building AppImage Manually ---")
+
+    target_bin = SRC_TAURI / "target" / "release" / app_name
+    if not target_bin.exists():
+        logging.error("Tauri binary not found, skipping AppImage build.")
+        return
+
+    appimagetool_path = PROJECT_ROOT / "appimagetool"
+    if not shutil.which("appimagetool") and not appimagetool_path.exists():
+        logging.info("Downloading appimagetool...")
+        url = "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+        try:
+            urllib.request.urlretrieve(url, appimagetool_path)
+            appimagetool_path.chmod(0o755)
+        except Exception as e:
+            logging.error(f"Failed to download appimagetool: {e}")
+            return
+
+    tool_cmd = (
+        ["appimagetool"] if shutil.which("appimagetool") else [str(appimagetool_path)]
     )
-    return dest
+
+    # Assemble AppDir
+    appdir = PROJECT_ROOT / "AppDir"
+    if appdir.exists():
+        shutil.rmtree(appdir)
+
+    bin_dir = appdir / "usr" / "bin"
+    apps_dir = appdir / "usr" / "share" / "applications"
+    icons_dir = appdir / "usr" / "share" / "icons" / "hicolor" / "scalable" / "apps"
+
+    for d in [bin_dir, apps_dir, icons_dir]:
+        d.mkdir(parents=True, exist_ok=True)
+
+    # Copy main binary and sidecar
+    shutil.copy2(target_bin, bin_dir / app_name)
+    (bin_dir / app_name).chmod(0o755)
+
+    for f in SERVER_DIR.iterdir():
+        if f.is_file() and f.name.startswith(f"{app_name}-server"):
+            dest_sidecar = bin_dir / f"{app_name}-server"
+            shutil.copy2(f, dest_sidecar)
+            dest_sidecar.chmod(0o755)
+
+    # Desktop and Icons
+    icon_src = SRC_TAURI / "icons" / "icon.svg"
+    if icon_src.exists():
+        shutil.copy2(icon_src, icons_dir / f"{app_name}.svg")
+        shutil.copy2(icon_src, appdir / f"{app_name}.svg")
+
+    desktop_file = f"""[Desktop Entry]
+Name={raw_name}
+Exec={app_name}
+Icon={app_name}
+Terminal=false
+Type=Application
+Categories=Utility;
+"""
+    (apps_dir / f"{app_name}.desktop").write_text(desktop_file)
+    (appdir / f"{app_name}.desktop").write_text(desktop_file)
+
+    # AppRun symlink
+    apprun = appdir / "AppRun"
+    apprun.symlink_to(f"usr/bin/{app_name}")
+
+    DIST_DIR.mkdir(parents=True, exist_ok=True)
+    out_file = DIST_DIR / f"{app_name}-{version}-x86_64.AppImage"
+
+    try:
+        # Run appimagetool and point APPIMAGE_EXTRACT_AND_RUN just in case we are in docker
+        env = os.environ.copy()
+        env["APPIMAGE_EXTRACT_AND_RUN"] = "1"
+        run_command(
+            tool_cmd + ["--no-appstream", str(appdir), str(out_file)],
+            cwd=PROJECT_ROOT,
+            env=env,
+            capture_output=True,
+        )
+        logging.info(f"AppImage generated successfully: {out_file.name}")
+    except Exception as e:
+        logging.error(f"Failed to compile final AppImage: {e}")
+    finally:
+        shutil.rmtree(appdir, ignore_errors=True)
 
 
-def build_tauri():
-    """Build the Tauri application. Continues even if some bundle formats fail."""
-    print("\n--- Building Tauri Application ---")
+def collect_artifacts(app_name: str, version: str) -> None:
+    """Gather all final distribution packages into the cleanly prepared dist directory."""
+    logging.info("--- Collecting Build Artifacts ---")
 
-    # Use the npm-installed tauri CLI
-    tauri_cli = PROJECT_ROOT / "node_modules" / ".bin" / "tauri"
-    cmd = [str(tauri_cli), "build"] if tauri_cli.exists() else ["npx", "tauri", "build"]
+    DIST_DIR.mkdir(parents=True, exist_ok=True)
+    bundle_dir = SRC_TAURI / "target" / "release" / "bundle"
 
-    result = subprocess.run(cmd, cwd=PROJECT_ROOT, text=True)
-    if result.returncode != 0:
-        print("[WARN] Some bundle formats may have failed (e.g. AppImage).")
-        print("       Checking for successfully built packages...")
+    if not bundle_dir.exists():
+        logging.error("Tauri bundle directory not found. App build may have failed.")
+        sys.exit(1)
+
+    collected_files = []
+
+    # 1. Collect standard installers and bundles generated by Tauri
+    for ext in ["*.deb", "*.rpm", "*.msi", "*.exe"]:
+        for file_path in bundle_dir.rglob(ext):
+            dest = DIST_DIR / file_path.name
+            shutil.copy2(file_path, dest)
+            collected_files.append(dest)
+
+    # 2. Collect AppImage if it was generated
+    for appimage in DIST_DIR.glob("*.AppImage"):
+        collected_files.append(appimage)
+
+    # 3. Create a generic portable tarball for Linux/macOS containing the raw binaries
+    target_bin = SRC_TAURI / "target" / "release" / app_name
+    if target_bin.exists() and sys.platform != "win32":
+        portable_name = f"{app_name}-{version}-portable.tar.gz"
+        portable_path = DIST_DIR / portable_name
+
+        with tarfile.open(portable_path, "w:gz") as tar:
+            # Add main executable
+            tar.add(target_bin, arcname=f"{app_name}-{version}/{app_name}")
+
+            # Add companion sidecar binary
+            for f in SERVER_DIR.iterdir():
+                if f.is_file() and f.name.startswith(f"{app_name}-server"):
+                    tar.add(f, arcname=f"{app_name}-{version}/{f.name}")
+
+        if portable_path not in collected_files:
+            collected_files.append(portable_path)
+
+    # Report results
+    if collected_files:
+        logging.info("Distribution ready! Artifacts located in 'dist/':")
+        for item in set(collected_files):
+            size_mb = item.stat().st_size / (1024 * 1024)
+            logging.info(f"  - {item.name} ({size_mb:.1f} MB)")
     else:
-        print("[OK] Tauri build completed successfully")
+        logging.warning("No build artifacts found.")
 
 
-def collect_outputs():
-    """Collect and organize build outputs."""
-    print("\n--- Collecting Build Outputs ---")
-    DIST_DIR.mkdir(exist_ok=True)
+def main() -> None:
+    try:
+        logging.info("Starting production build process...")
 
-    tauri_bundle = PROJECT_ROOT / "src-tauri" / "target" / "release" / "bundle"
+        # Validation & Setup
+        validate_environment()
+        app_name, raw_name, version = get_app_info()
+        target_triple = get_rust_target()
 
-    system = platform.system().lower()
-    if system == "linux":
-        # Copy .deb
-        for deb in tauri_bundle.rglob("*.deb"):
-            dest = DIST_DIR / deb.name
-            shutil.copy2(deb, dest)
-            print(f"[OK] {dest}")
+        # Build Pipeline
+        build_sidecar(target_triple, app_name)
+        build_tauri()
+        build_appimage_manual(app_name, raw_name, version)
+        collect_artifacts(app_name, version)
 
-        # Copy AppImage
-        for appimage in tauri_bundle.rglob("*.AppImage"):
-            dest = DIST_DIR / appimage.name
-            shutil.copy2(appimage, dest)
-            print(f"[OK] {dest}")
+        logging.info("Build pipeline completed successfully.")
 
-        # Copy RPM
-        for rpm in tauri_bundle.rglob("*.rpm"):
-            dest = DIST_DIR / rpm.name
-            shutil.copy2(rpm, dest)
-            print(f"[OK] {dest}")
-
-        # Create portable tar.gz
-        binary = PROJECT_ROOT / "src-tauri" / "target" / "release" / APP_NAME
-        if binary.exists():
-            portable = DIST_DIR / f"{APP_NAME}-{VERSION}-linux-x86_64.tar.gz"
-            with tarfile.open(portable, "w:gz") as tar:
-                tar.add(binary, arcname=f"{APP_NAME}-{VERSION}/{APP_NAME}")
-            print(f"[OK] {portable}")
-
-    elif system == "windows":
-        for exe in tauri_bundle.rglob("*.msi"):
-            dest = DIST_DIR / exe.name
-            shutil.copy2(exe, dest)
-            print(f"[OK] {dest}")
-        for exe in tauri_bundle.rglob("*.exe"):
-            dest = DIST_DIR / exe.name
-            shutil.copy2(exe, dest)
-            print(f"[OK] {dest}")
-
-
-def initialize_config():
-    config_file = PROJECT_ROOT / "config.json"
-    if not config_file.exists():
-        template = PROJECT_ROOT / "config.json.template"
-        if template.exists():
-            shutil.copy2(template, config_file)
-        else:
-            config_file.write_text('{\n    "data_dir": null\n}\n')
-    print(f"[OK] Config file ready")
-
-
-def main():
-    print("=" * 70)
-    print(f"Bangla Typer Build Script v{VERSION} (Tauri)")
-    print("=" * 70)
-
-    validate_environment()
-    initialize_config()
-
-    # Build sidecar first
-    build_sidecar()
-
-    # Build Tauri app
-    build_tauri()
-
-    # Collect outputs
-    collect_outputs()
-
-    print("\n" + "=" * 70)
-    print("[SUCCESS] Build completed!")
-    print("=" * 70)
-    print(f"\nOutput files are in: {DIST_DIR}")
+    except KeyboardInterrupt:
+        logging.warning("Build canceled by user.")
+        sys.exit(1)
+    except Exception as e:
+        logging.error(f"Fatal error during build: {e}", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
