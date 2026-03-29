@@ -78,12 +78,9 @@ def validate_environment() -> None:
             logging.error(f"Missing required build tool: {tool}")
             sys.exit(1)
 
-    # Check for tauri cli (local or global)
-    tauri_local = PROJECT_ROOT / "node_modules" / ".bin" / "tauri"
-    if not tauri_local.exists() and not shutil.which("npx"):
-        logging.error(
-            "Tauri CLI not found. Ensure 'npm install' was run or 'npx' is available."
-        )
+    # Check for npm
+    if not shutil.which("npm"):
+        logging.error("npm is not installed. Please install Node.js.")
         sys.exit(1)
 
 
@@ -152,9 +149,12 @@ def build_tauri() -> None:
     """Build the final Tauri application."""
     logging.info("--- Building Frontend & Bundling Tauri App ---")
 
-    tauri_bin = PROJECT_ROOT / "node_modules" / ".bin" / "tauri"
-    cmd = [str(tauri_bin), "build"] if tauri_bin.exists() else ["npx", "tauri", "build"]
+    npm_cmd = shutil.which("npm")
+    if not npm_cmd:
+        logging.error("npm is not installed or not in PATH.")
+        sys.exit(1)
 
+    cmd = [npm_cmd, "run", "build"]
     run_command(cmd, cwd=PROJECT_ROOT)
 
 
