@@ -290,7 +290,8 @@ def collect_artifacts(app_name: str, version: str) -> None:
             # Add companion sidecar binary
             for f in SERVER_DIR.iterdir():
                 if f.is_file() and f.name.startswith(f"{app_name}-server"):
-                    tar.add(f, arcname=f"{app_name}-{version}/{f.name}")
+                    # Strip the target triple for the tarball as well
+                    tar.add(f, arcname=f"{app_name}-{version}/{app_name}-server")
 
         if portable_path not in collected_files:
             collected_files.append(portable_path)
