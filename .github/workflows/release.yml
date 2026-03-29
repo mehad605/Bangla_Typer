@@ -129,6 +129,40 @@ jobs:
           includeDebug: false
           includeRelease: true
 
+      # ── Portable tarball (Linux only) ───────────────────────────────
+      - name: Create portable tarball (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          APP_NAME="${{ env.APP_NAME }}"
+          VERSION="${{ env.VERSION }}"
+          if [[ -z "$VERSION" ]]; then
+            VERSION=$(uv run python -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])")
+          fi
+
+          TARGET_BIN="src-tauri/target/release/${APP_NAME}"
+          if [[ ! -f "${TARGET_BIN}" ]]; then
+            echo "::warning::Release binary not found, skipping portable tarball"
+            exit 0
+          fi
+
+          mkdir -p "pkgdir/${APP_NAME}-${VERSION}"
+          cp "${TARGET_BIN}" "pkgdir/${APP_NAME}-${VERSION}/${APP_NAME}"
+          chmod 755 "pkgdir/${APP_NAME}-${VERSION}/${APP_NAME}"
+
+          for f in src-tauri/server/*; do
+            if [[ -f "${f}" && "$(basename ${f})" == ${APP_NAME}-server* ]]; then
+              cp "${f}" "pkgdir/${APP_NAME}-${VERSION}/${APP_NAME}-server"
+              chmod 755 "pkgdir/${APP_NAME}-${VERSION}/${APP_NAME}-server"
+              break
+            fi
+          done
+
+          mkdir -p dist
+          tar czf "dist/${APP_NAME}-${VERSION}-portable.tar.gz" \
+            -C pkgdir "${APP_NAME}-${VERSION}"
+          rm -rf pkgdir
+
       # ── AppImage (Linux only) ────────────────────────────────────────
       - name: Build AppImage (Linux)
         if: runner.os == 'Linux'
@@ -181,16 +215,15 @@ jobs:
           fi
 
           # Desktop entry
-          cat > "AppDir/usr/share/applications/${APP_NAME}.desktop" << DESKTOP
-          [Desktop Entry]
-          Name=${RAW_NAME}
-          Exec=${APP_NAME}
-          Icon=${APP_NAME}
-          Terminal=false
-          Type=Application
-          Categories=Utility;
-          DESKTOP
-
+          printf '%s\n' \
+            "[Desktop Entry]" \
+            "Name=${RAW_NAME}" \
+            "Exec=${APP_NAME}" \
+            "Icon=${APP_NAME}" \
+            "Terminal=false" \
+            "Type=Application" \
+            "Categories=Utility;" \
+            > "AppDir/usr/share/applications/${APP_NAME}.desktop"
           cp "AppDir/usr/share/applications/${APP_NAME}.desktop" "AppDir/${APP_NAME}.desktop"
 
           # AppRun symlink

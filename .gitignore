@@ -9,6 +9,7 @@
 #AUR
 PKGBUILD
 PKGBUILD-bin
+bangla-typer.install
 
 # Build and Distribution
 build/
