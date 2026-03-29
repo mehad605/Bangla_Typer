@@ -136,7 +136,10 @@ jobs:
         shell: bash
         run: |
           APP_NAME="${{ env.APP_NAME }}"
-          VERSION="${{ env.VERSION:-$(python -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])") }}"
+          VERSION="${{ env.VERSION }}"
+          if [[ -z "$VERSION" ]]; then
+            VERSION=$(python -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])")
+          fi
           RAW_NAME="Bangla Typer"
           TARGET_BIN="src-tauri/target/release/${APP_NAME}"
 
