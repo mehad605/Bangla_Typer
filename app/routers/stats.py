@@ -14,7 +14,7 @@ def add_inst_stat(req: InstantStatRequest):
             conn.execute(
                 """
                 INSERT INTO instant_stats 
-                (timestamp, wpm, rawWpm, acc, consistency, timeMs, correctChars, wrongChars, extraChars, missedChars, totalChars, isValid, validationFlags)
+                (timestamp, wpm, rawWpm, acc, consistency, timeMs, correctChars, wrongChars, extraChars, missedChars, totalKeystrokes, isValid, validationFlags)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
@@ -28,7 +28,7 @@ def add_inst_stat(req: InstantStatRequest):
                     req.wrongChars,
                     req.extraChars,
                     req.missedChars,
-                    req.totalChars,
+                    req.totalKeystrokes,
                     1 if req.isValid else 0,  # NEW: Convert bool to int for SQLite
                     req.validationFlags,  # NEW: Validation flags
                 ),

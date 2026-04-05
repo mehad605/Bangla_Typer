@@ -3603,9 +3603,9 @@ function showInstResults() {
         wrongChars: wrongChars,
         extraChars: extraChars,
         missedChars: missedChars,
-        totalChars: instKeystrokes.total,
-        isValid: validation.isValid,              // NEW: Validation flag
-        validationFlags: validation.flags.join(',') // NEW: Comma-separated flags
+        totalKeystrokes: instKeystrokes.total,
+        isValid: validation.isValid,
+        validationFlags: validation.flags.join(',')
     };
 
     fetch('/api/inst_stats', {
@@ -3969,7 +3969,8 @@ async function renderInstStatsView() {
     const avgCons10 = last10.length > 0 ? (last10.reduce((s, h) => {
         let c = h.consistency;
         if (!c) {
-            if ((h.totalChars || 0) > 0) c = Math.max(0, 100 - ((h.wrongChars || 0) / (h.totalChars || 1)) * 100);
+            const total = h.totalKeystrokes || h.totalChars || 0;
+            if (total > 0) c = Math.max(0, 100 - ((h.wrongChars || 0) / total) * 100);
             else if (h.wpm > 0) c = h.acc;
         }
         return s + (c || 0);
@@ -3994,8 +3995,9 @@ async function renderInstStatsView() {
 
         let consistency = h.consistency || 0;
         if (!consistency) {
-            if ((h.totalChars || 0) > 0) {
-                consistency = Math.max(0, 100 - ((h.wrongChars || 0) / (h.totalChars || 1)) * 100);
+            const total = h.totalKeystrokes || h.totalChars || 0;
+            if (total > 0) {
+                consistency = Math.max(0, 100 - ((h.wrongChars || 0) / total) * 100);
             } else if (h.wpm > 0) consistency = h.acc;
         }
         if (consistency > maxCons) maxCons = consistency;
@@ -4033,8 +4035,9 @@ async function renderInstStatsView() {
 
         let cons = h.consistency || 0;
         if (!cons) {
-            if ((h.totalChars || 0) > 0) {
-                cons = Math.max(0, 100 - ((h.wrongChars || 0) / (h.totalChars || 1)) * 100);
+            const total = h.totalKeystrokes || h.totalChars || 0;
+            if (total > 0) {
+                cons = Math.max(0, 100 - ((h.wrongChars || 0) / total) * 100);
             } else if (h.wpm > 0) cons = h.acc;
         }
 

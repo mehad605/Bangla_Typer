@@ -15,6 +15,59 @@ _pool_lock = __import__("threading").Lock()
 _POOL_SIZE = 5
 
 
+def migrate_instant_stats_rename_column(c):
+    """Migrate totalChars column to totalKeystrokes in instant_stats table."""
+    try:
+        c.execute("PRAGMA table_info(instant_stats)")
+        columns = [col[1] for col in c.fetchall()]
+
+        if "totalChars" in columns and "totalKeystrokes" not in columns:
+            print("Migrating instant_stats: totalChars -> totalKeystrokes")
+
+            try:
+                c.execute(
+                    "ALTER TABLE instant_stats RENAME COLUMN totalChars TO totalKeystrokes"
+                )
+                print("✓ Column renamed successfully")
+                return
+            except sqlite3.OperationalError:
+                pass
+
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS instant_stats_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp INTEGER,
+                    wpm INTEGER,
+                    rawWpm INTEGER,
+                    acc INTEGER,
+                    consistency INTEGER,
+                    timeMs INTEGER,
+                    correctChars INTEGER,
+                    wrongChars INTEGER,
+                    extraChars INTEGER,
+                    missedChars INTEGER,
+                    totalKeystrokes INTEGER,
+                    isValid INTEGER DEFAULT 1,
+                    validationFlags TEXT DEFAULT ''
+                )
+            """)
+
+            c.execute("""
+                INSERT INTO instant_stats_new 
+                SELECT id, timestamp, wpm, rawWpm, acc, consistency, timeMs,
+                       correctChars, wrongChars, extraChars, missedChars,
+                       totalChars, isValid, validationFlags
+                FROM instant_stats
+            """)
+
+            c.execute("DROP TABLE instant_stats")
+            c.execute("ALTER TABLE instant_stats_new RENAME TO instant_stats")
+            print("✓ Table recreated with new column name")
+
+    except sqlite3.OperationalError as e:
+        print(f"Migration skipped: {e}")
+
+
 def init_db():
     paths.ensure_data_dirs()
     with get_db() as conn:
@@ -63,7 +116,7 @@ def init_db():
                 wrongChars INTEGER,
                 extraChars INTEGER,
                 missedChars INTEGER,
-                totalChars INTEGER
+                totalKeystrokes INTEGER
             )
         """)
         c.execute("""
@@ -175,6 +228,9 @@ def init_db():
             )
         except sqlite3.OperationalError:
             pass  # Column already exists
+
+        # Task 2.1: Migrate totalChars to totalKeystrokes
+        migrate_instant_stats_rename_column(c)
 
         c.execute("""
             CREATE TABLE IF NOT EXISTS playlists (

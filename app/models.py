@@ -12,7 +12,7 @@ class InstantStatRequest(BaseModel):
     wrongChars: int
     extraChars: int
     missedChars: int
-    totalChars: int
+    totalKeystrokes: int  # RENAMED from totalChars
     isValid: bool = True  # NEW: Validation flag for gaming prevention
     validationFlags: str = ""  # NEW: Comma-separated validation flags
 

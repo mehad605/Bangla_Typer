@@ -14,7 +14,7 @@ export const state = {
         wrongChars: 0,
         extraChars: 0,
         missedChars: 0,
-        totalChars: 0,
+        totalKeystrokes: 0,
         startTime: null,
         isActive: false
     },
