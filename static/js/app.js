@@ -3605,11 +3605,7 @@ function showInstResults() {
         validationFlags: validation.flags.join(',')
     };
 
-    fetch('/api/inst_stats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    }).catch(e => console.error("Error saving stats to DB:", e));
+    api.saveInstantStats(payload).catch(e => console.error("Error saving stats to DB:", e));
 }
 
 function renderInstChart() {
