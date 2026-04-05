@@ -11,10 +11,10 @@ class InstantStatRequest(BaseModel):
     correctChars: int
     wrongChars: int
     extraChars: int
-    missedChars: int
-    totalKeystrokes: int  # RENAMED from totalChars
-    isValid: bool = True  # NEW: Validation flag for gaming prevention
-    validationFlags: str = ""  # NEW: Comma-separated validation flags
+    # missedChars removed: always 0 due to forced correction mechanics
+    totalKeystrokes: int
+    isValid: bool = True
+    validationFlags: str = ""
 
 
 class ProgressRequest(BaseModel):

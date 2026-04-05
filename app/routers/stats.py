@@ -27,10 +27,10 @@ def add_inst_stat(req: InstantStatRequest):
                     req.correctChars,
                     req.wrongChars,
                     req.extraChars,
-                    req.missedChars,
+                    0,  # missedChars always 0 due to forced correction mechanics
                     req.totalKeystrokes,
-                    1 if req.isValid else 0,  # NEW: Convert bool to int for SQLite
-                    req.validationFlags,  # NEW: Validation flags
+                    1 if req.isValid else 0,
+                    req.validationFlags,
                 ),
             )
             conn.commit()

@@ -3544,7 +3544,7 @@ function showInstResults() {
     document.getElementById('res-char-c').textContent = toBn(correctChars);
     document.getElementById('res-char-i').textContent = toBn(wrongChars);
     document.getElementById('res-char-e').textContent = toBn(extraChars);
-    document.getElementById('res-char-m').textContent = toBn(missedChars);
+    // missedChars removed: always 0 due to forced correction mechanics
 
     // Handle null consistency (session too short)
     if (consistency !== null) {
@@ -3602,7 +3602,7 @@ function showInstResults() {
         correctChars: correctChars,
         wrongChars: wrongChars,
         extraChars: extraChars,
-        missedChars: missedChars,
+        // missedChars removed: always 0 due to forced correction mechanics
         totalKeystrokes: instKeystrokes.total,
         isValid: validation.isValid,
         validationFlags: validation.flags.join(',')
