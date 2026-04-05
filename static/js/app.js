@@ -2794,14 +2794,11 @@ const rows = [
  * These values can be tuned based on observed false positive/negative rates.
  * 
  * See: INSTANT_MODE_SPRINT_PLAN.md - Task 1.1 for threshold rationale
+ * Configuration now in instant-mode-config.js
  */
-const INSTANT_MODE_CONFIG = {
-    MAX_WRONG_ATTEMPTS_PER_CLUSTER: 5,  // Maximum wrong keys allowed per cluster
-    MAX_WRONG_RATIO: 0.4,                // 40% wrong keystrokes threshold
-    MIN_SESSION_TIME_MS: 2000,           // Minimum 2 seconds to prevent instant completion
-    MAX_REASONABLE_WPM: 250,             // Flag sessions above this (Bangla world record ~180)
-    MIN_ACCURACY_THRESHOLD: 30           // Flag sessions below 30% accuracy
-};
+
+// Use centralized configuration
+const INSTANT_MODE_CONFIG = InstantModeConfig.VALIDATION;
 
 // ============================================================================
 // INSTANT MODE: State Variables
