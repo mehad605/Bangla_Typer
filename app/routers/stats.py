@@ -6,6 +6,7 @@ from app.models import InstantStatRequest
 
 router = APIRouter(prefix="/api")
 
+
 @router.post("/inst_stats")
 def add_inst_stat(req: InstantStatRequest):
     try:
@@ -13,8 +14,8 @@ def add_inst_stat(req: InstantStatRequest):
             conn.execute(
                 """
                 INSERT INTO instant_stats 
-                (timestamp, wpm, rawWpm, acc, consistency, timeMs, correctChars, wrongChars, extraChars, missedChars, totalChars)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (timestamp, wpm, rawWpm, acc, consistency, timeMs, correctChars, wrongChars, extraChars, missedChars, totalChars, isValid, validationFlags)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     req.timestamp,
@@ -28,6 +29,8 @@ def add_inst_stat(req: InstantStatRequest):
                     req.extraChars,
                     req.missedChars,
                     req.totalChars,
+                    1 if req.isValid else 0,  # NEW: Convert bool to int for SQLite
+                    req.validationFlags,  # NEW: Validation flags
                 ),
             )
             conn.commit()
@@ -35,6 +38,7 @@ def add_inst_stat(req: InstantStatRequest):
     except sqlite3.OperationalError as e:
         print("SQLite Error on POST /api/inst_stats:", e)
         return {"status": "db_error"}
+
 
 @router.get("/yt_stats")
 def get_yt_stats():

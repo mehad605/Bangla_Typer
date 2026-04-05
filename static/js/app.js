@@ -2785,13 +2785,48 @@ const rows = [
     ]
 ];
 
+// ============================================================================
+// INSTANT MODE: Gaming Prevention Configuration
+// ============================================================================
+
+/**
+ * Configuration for gaming prevention and validation thresholds.
+ * These values can be tuned based on observed false positive/negative rates.
+ * 
+ * See: INSTANT_MODE_SPRINT_PLAN.md - Task 1.1 for threshold rationale
+ */
+const INSTANT_MODE_CONFIG = {
+    MAX_WRONG_ATTEMPTS_PER_CLUSTER: 5,  // Maximum wrong keys allowed per cluster
+    MAX_WRONG_RATIO: 0.4,                // 40% wrong keystrokes threshold
+    MIN_SESSION_TIME_MS: 2000,           // Minimum 2 seconds to prevent instant completion
+    MAX_REASONABLE_WPM: 250,             // Flag sessions above this (Bangla world record ~180)
+    MIN_ACCURACY_THRESHOLD: 30           // Flag sessions below 30% accuracy
+};
+
+// ============================================================================
+// INSTANT MODE: State Variables
+// ============================================================================
+
 let currentText = '';
 let currentNText = '';
 let currentSequence = [];
 let currentIndex = 0;
 let typedCorrectness = [];
 let instKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
-let instTypingState = { startTime: null, endTime: null, wpmHistory: [], rawHistory: [], errHistory: [], mistakesHistory: [], lastCorr: 0, lastTotal: 0, lastErr: 0, lastMistakes: 0 };
+let instTypingState = { 
+    startTime: null, 
+    endTime: null, 
+    wpmHistory: [], 
+    rawHistory: [], 
+    errHistory: [], 
+    mistakesHistory: [], 
+    lastCorr: 0, 
+    lastTotal: 0, 
+    lastErr: 0, 
+    lastMistakes: 0,
+    clusterAttempts: {},          // NEW: Track wrong attempts per cluster
+    maxWrongAttemptsPerCluster: 0 // NEW: Track maximum attempts on any cluster
+};
 let instTimer = null;
 let instChartInstance = null;
 
@@ -2861,6 +2896,92 @@ function getClusterBoundaries(seq) {
         }
     });
     return bounds;
+}
+
+// ============================================================================
+// INSTANT MODE: Gaming Prevention & Validation
+// ============================================================================
+
+/**
+ * Validates typing session to detect gaming/cheating patterns.
+ * 
+ * This function checks multiple indicators of suspicious typing behavior:
+ * - Excessive wrong keystroke ratio (spam detection)
+ * - Unrealistic WPM values (impossible speeds)
+ * - Session duration too short (instant completion exploits)
+ * - Low accuracy with high WPM (contradiction indicator)
+ * - Excessive attempts on single character (brute force)
+ * 
+ * @param {Object} sessionData - Complete session statistics
+ * @param {number} sessionData.wpm - Net WPM
+ * @param {number} sessionData.rawWpm - Raw WPM (optional, for future checks)
+ * @param {number} sessionData.acc - Accuracy percentage (0-100)
+ * @param {number} sessionData.consistency - Consistency percentage (optional)
+ * @param {number} sessionData.timeMs - Session duration in milliseconds
+ * @param {number} sessionData.totalKeystrokes - All keystrokes including wrong
+ * @param {number} sessionData.wrongKeystrokes - Number of wrong keystrokes
+ * @param {number} sessionData.correctKeystrokes - Number of correct keystrokes
+ * @param {number} sessionData.maxWrongAttemptsPerCluster - Max attempts on single character
+ * 
+ * @returns {Object} Validation result
+ * @returns {boolean} returns.isValid - True if session passes all checks
+ * @returns {string} returns.reason - Human-readable failure reason (empty if valid)
+ * @returns {string[]} returns.flags - Array of validation flags triggered
+ * 
+ * @example
+ * const result = validateTypingSession({
+ *   wpm: 45, acc: 90, timeMs: 60000,
+ *   totalKeystrokes: 300, wrongKeystrokes: 30,
+ *   correctKeystrokes: 270, maxWrongAttemptsPerCluster: 2
+ * });
+ * // => { isValid: true, reason: '', flags: [] }
+ */
+function validateTypingSession(sessionData) {
+    const flags = [];
+    let isValid = true;
+    let reason = '';
+    
+    // Check 1: Wrong keystroke ratio
+    const wrongRatio = sessionData.totalKeystrokes > 0 
+        ? sessionData.wrongKeystrokes / sessionData.totalKeystrokes 
+        : 0;
+    
+    if (wrongRatio > INSTANT_MODE_CONFIG.MAX_WRONG_RATIO) {
+        flags.push('EXCESSIVE_WRONG_RATIO');
+        isValid = false;
+        reason = `Too many wrong keystrokes (${Math.round(wrongRatio * 100)}%)`;
+    }
+    
+    // Check 2: Unrealistic WPM
+    if (sessionData.wpm > INSTANT_MODE_CONFIG.MAX_REASONABLE_WPM) {
+        flags.push('UNREALISTIC_WPM');
+        isValid = false;
+        reason = `WPM too high (${sessionData.wpm})`;
+    }
+    
+    // Check 3: Minimum session time
+    if (sessionData.timeMs < INSTANT_MODE_CONFIG.MIN_SESSION_TIME_MS) {
+        flags.push('SESSION_TOO_SHORT');
+        isValid = false;
+        reason = `Session too short (${Math.round(sessionData.timeMs / 1000)}s)`;
+    }
+    
+    // Check 4: Suspiciously low accuracy with high WPM
+    // (Indicator of spam-then-correct pattern)
+    if (sessionData.acc < INSTANT_MODE_CONFIG.MIN_ACCURACY_THRESHOLD && sessionData.wpm > 100) {
+        flags.push('LOW_ACCURACY_HIGH_WPM');
+        isValid = false;
+        reason = `Low accuracy (${sessionData.acc}%) with high WPM`;
+    }
+    
+    // Check 5: Per-cluster wrong attempt tracking
+    if (sessionData.maxWrongAttemptsPerCluster > INSTANT_MODE_CONFIG.MAX_WRONG_ATTEMPTS_PER_CLUSTER) {
+        flags.push('EXCESSIVE_CLUSTER_ATTEMPTS');
+        isValid = false;
+        reason = `Too many attempts on single character (${sessionData.maxWrongAttemptsPerCluster} attempts)`;
+    }
+    
+    return { isValid, reason, flags };
 }
 
 /**
@@ -3192,10 +3313,34 @@ document.getElementById('hidden-input').addEventListener('keydown', e => {
         instKeystrokes.wrong++;
         if (isLastInCluster) {
             const ci = getClusterBoundaries(currentSequence).findIndex(b => b.end === curStep.targetEnd);
+            
+            // Track per-cluster wrong attempts for gaming detection
+            if (!instTypingState.clusterAttempts[ci]) {
+                instTypingState.clusterAttempts[ci] = 0;
+            }
+            instTypingState.clusterAttempts[ci]++;
+            
+            // Update maximum attempts tracker
+            if (instTypingState.clusterAttempts[ci] > instTypingState.maxWrongAttemptsPerCluster) {
+                instTypingState.maxWrongAttemptsPerCluster = instTypingState.clusterAttempts[ci];
+            }
+            
             typedCorrectness[ci] = false;
             currentIndex++;
         } else {
             const ci = getClusterBoundaries(currentSequence).findIndex(b => b.end === curStep.clusterEnd);
+            
+            // Track attempts even for partial cluster wrong keystroke
+            if (!instTypingState.clusterAttempts[ci]) {
+                instTypingState.clusterAttempts[ci] = 0;
+            }
+            instTypingState.clusterAttempts[ci]++;
+            
+            // Update maximum attempts tracker
+            if (instTypingState.clusterAttempts[ci] > instTypingState.maxWrongAttemptsPerCluster) {
+                instTypingState.maxWrongAttemptsPerCluster = instTypingState.clusterAttempts[ci];
+            }
+            
             typedCorrectness[ci] = false;
             currentIndex++;
         }
@@ -3272,7 +3417,20 @@ function loadNewText() {
     currentIndex = 0;
     typedCorrectness = [];
     instKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
-    instTypingState = { startTime: null, endTime: null, wpmHistory: [], rawHistory: [], errHistory: [], mistakesHistory: [], lastCorr: 0, lastTotal: 0, lastErr: 0, lastMistakes: 0 };
+    instTypingState = { 
+        startTime: null, 
+        endTime: null, 
+        wpmHistory: [], 
+        rawHistory: [], 
+        errHistory: [], 
+        mistakesHistory: [], 
+        lastCorr: 0, 
+        lastTotal: 0, 
+        lastErr: 0, 
+        lastMistakes: 0,
+        clusterAttempts: {},          // Reset cluster attempt tracking
+        maxWrongAttemptsPerCluster: 0 // Reset max attempts tracker
+    };
     updateStats();
     renderTypingArea();
     updateStepGuide();
@@ -3287,7 +3445,20 @@ function resetTyping() {
     currentIndex = 0;
     typedCorrectness = [];
     instKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
-    instTypingState = { startTime: null, endTime: null, wpmHistory: [], rawHistory: [], errHistory: [], mistakesHistory: [], lastCorr: 0, lastTotal: 0, lastErr: 0, lastMistakes: 0 };
+    instTypingState = { 
+        startTime: null, 
+        endTime: null, 
+        wpmHistory: [], 
+        rawHistory: [], 
+        errHistory: [], 
+        mistakesHistory: [], 
+        lastCorr: 0, 
+        lastTotal: 0, 
+        lastErr: 0, 
+        lastMistakes: 0,
+        clusterAttempts: {},          // Reset cluster attempt tracking
+        maxWrongAttemptsPerCluster: 0 // Reset max attempts tracker
+    };
     updateStats();
     renderTypingArea();
     updateStepGuide();
@@ -3363,10 +3534,43 @@ function showInstResults() {
     document.getElementById('res-cons').textContent = toBn(consistency) + '%';
     document.getElementById('res-time').textContent = toBn(Math.round(timeSec)) + 's';
 
+    // Validate session for gaming/cheating patterns
+    const sessionData = {
+        wpm: wpm,
+        rawWpm: rawWpm,
+        acc: acc,
+        consistency: consistency,
+        timeMs: timeMs,
+        totalKeystrokes: instKeystrokes.total,
+        wrongKeystrokes: instKeystrokes.wrong,
+        correctKeystrokes: instKeystrokes.correct,
+        maxWrongAttemptsPerCluster: instTypingState.maxWrongAttemptsPerCluster
+    };
+    
+    const validation = validateTypingSession(sessionData);
+    
+    // Display validation warning if session is invalid
+    const validationWarning = document.getElementById('validation-warning');
+    const validationReason = document.getElementById('validation-reason');
+    
+    if (!validation.isValid) {
+        if (validationWarning) {
+            validationWarning.style.display = 'block';
+        }
+        if (validationReason) {
+            validationReason.textContent = validation.reason;
+        }
+        console.warn('Invalid session detected:', validation.flags);
+    } else {
+        if (validationWarning) {
+            validationWarning.style.display = 'none';
+        }
+    }
+
     document.getElementById('modal-inst-results').classList.add('open');
     renderInstChart();
 
-    // Save History directly to SQLite database
+    // Save History directly to SQLite database with validation flags
     const payload = {
         timestamp: Date.now(),
         wpm: wpm,
@@ -3378,7 +3582,9 @@ function showInstResults() {
         wrongChars: wrongChars,
         extraChars: extraChars,
         missedChars: missedChars,
-        totalChars: instKeystrokes.total
+        totalChars: instKeystrokes.total,
+        isValid: validation.isValid,              // NEW: Validation flag
+        validationFlags: validation.flags.join(',') // NEW: Comma-separated flags
     };
 
     fetch('/api/inst_stats', {

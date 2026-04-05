@@ -163,6 +163,19 @@ def init_db():
         except sqlite3.OperationalError:
             pass
 
+        # Add isValid and validationFlags columns for gaming prevention (Task 1.1)
+        try:
+            c.execute("ALTER TABLE instant_stats ADD COLUMN isValid INTEGER DEFAULT 1")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        try:
+            c.execute(
+                "ALTER TABLE instant_stats ADD COLUMN validationFlags TEXT DEFAULT ''"
+            )
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
         c.execute("""
             CREATE TABLE IF NOT EXISTS playlists (
                 playlist_id TEXT PRIMARY KEY,

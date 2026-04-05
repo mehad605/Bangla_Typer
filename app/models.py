@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class InstantStatRequest(BaseModel):
     timestamp: int
     wpm: int
@@ -12,9 +13,13 @@ class InstantStatRequest(BaseModel):
     extraChars: int
     missedChars: int
     totalChars: int
+    isValid: bool = True  # NEW: Validation flag for gaming prevention
+    validationFlags: str = ""  # NEW: Comma-separated validation flags
+
 
 class ProgressRequest(BaseModel):
     progress: int
+
 
 class StatRequest(BaseModel):
     correct_words: int
