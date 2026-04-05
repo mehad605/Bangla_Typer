@@ -3276,20 +3276,25 @@ document.getElementById('hidden-input').addEventListener('keydown', e => {
             const mistakesInInterval = mists - instTypingState.lastMistakes;
 
             /**
-             * Interval Net WPM Calculation (per-second snapshot):
+             * Per-Second Interval Tracking
              * 
-             * Gross WPM = (keystrokes / 5) * 60
-             * Net WPM = Gross WPM - (mistakes * 60)
+             * Captures WPM snapshots every second using standardized calculation.
+             * These snapshots are used for:
+             * - Consistency calculation
+             * - Performance graphs
+             * - Trend analysis
              * 
-             * Note: Industry standard treats 5 keystrokes as 1 "word"
-             * This accounts for Bangla's complex Juktakkhor which may take
-             * 2-3 keystrokes for a single character (e.g., "ক্ষ" = k+g+N in Bijoy)
+             * Uses WPMCalculator.calculateIntervalWPM() for consistency with
+             * other WPM calculations in the application.
              */
-            const wpm = Math.max(0, Math.floor((tot / 5 - mistakesInInterval) * 60));
-            const rawWpm = Math.max(0, Math.floor((tot / 5) * 60));
+            const { netWPM, rawWPM } = WPMCalculator.calculateIntervalWPM(
+                tot,                // Keystrokes in this 1-second interval
+                mistakesInInterval, // Mistakes in this 1-second interval
+                1000                // Interval duration (1 second)
+            );
 
-            instTypingState.wpmHistory.push(wpm);
-            instTypingState.rawHistory.push(rawWpm);
+            instTypingState.wpmHistory.push(netWPM);
+            instTypingState.rawHistory.push(rawWPM);
             instTypingState.errHistory.push(err);
             instTypingState.mistakesHistory.push(mistakesInInterval);
 
@@ -3367,24 +3372,40 @@ function updateStats() {
     let currentAcc = 100;
 
     if (instTypingState && instTypingState.startTime) {
-        const elapsedMin = (Date.now() - instTypingState.startTime) / 60000;
-        if (elapsedMin > 0) {
-            const mistakes = getCompletedMistakes(typedCorrectness, getClusterBoundaries(currentSequence), currentNText);
+        const elapsedMs = Date.now() - instTypingState.startTime;
+        
+        if (elapsedMs > 0) {
+            const mistakes = getCompletedMistakes(
+                typedCorrectness, 
+                getClusterBoundaries(currentSequence), 
+                currentNText
+            );
             instKeystrokes.mistakes = mistakes;
+            
             /**
-             * Real-time Net WPM:
-             * Net WPM = ((Total Keystrokes / 5) - Word-Level Mistakes) / Minutes
+             * Real-time Net WPM Display
              * 
-             * Where:
-             * - Total Keystrokes: All physical key presses (including Shift/Link keys)
-             * - /5: Converts keystrokes to "word equivalents" (industry standard)
-             * - Mistakes: Count of words with any error (not character-level)
+             * Uses standardized WPMCalculator module for consistency with
+             * interval tracking and final results.
+             * 
+             * This ensures user sees consistent WPM values across:
+             * - Real-time display (this function)
+             * - Per-second chart data (interval tracking)
+             * - Final results modal (showInstResults)
              */
-            currentWpm = Math.max(0, Math.floor((instKeystrokes.total / 5 - mistakes) / elapsedMin));
+            currentWpm = WPMCalculator.calculateNetWPM(
+                instKeystrokes.total,
+                mistakes,
+                elapsedMs
+            );
         }
     }
+    
     if (instKeystrokes.total > 0) {
-        currentAcc = Math.floor((instKeystrokes.correct / instKeystrokes.total) * 100);
+        currentAcc = WPMCalculator.calculateAccuracy(
+            instKeystrokes.correct,
+            instKeystrokes.total
+        );
     }
 
     const elWpm = document.getElementById('stat-wpm-rt');
@@ -3482,7 +3503,6 @@ function showInstResults() {
     }
     const timeMs = Math.max(0, instTypingState.endTime - instTypingState.startTime);
     const timeSec = timeMs / 1000;
-    const timeMin = timeSec / 60;
 
     const correctChars = typedCorrectness.filter(v => v === true).length;
     const wrongChars = typedCorrectness.filter(v => v === false).length;
@@ -3490,37 +3510,32 @@ function showInstResults() {
     const missedChars = 0; // Forced correction mechanics
 
     /**
-     * Final Results Net WPM Calculation:
+     * Final Session Results
      * 
-     * Gross WPM = (Total Keystrokes / 5) / Time in Minutes
-     * Net WPM = Gross WPM - (Mistakes / Time in Minutes)
+     * Uses standardized WPMCalculator module for all metrics.
+     * This ensures consistency with:
+     * - Real-time display (updateStats)
+     * - Interval tracking (setInterval timer)
      * 
-     * Simplified: Net WPM = ((Total Keystrokes / 5) - Mistakes) / Time in Minutes
-     * 
-     * For Bangla typing:
-     * - 5 keystrokes = 1 "word" (industry standard)
-     * - Mistakes counted at word-level (not character-level)
-     * - Complex Juktakkhor may take 2-3 keystrokes per character
+     * All three contexts now use identical formulas, eliminating
+     * the inconsistency issue identified in code review.
      */
-    const mistakes = getCompletedMistakes(typedCorrectness, getClusterBoundaries(currentSequence), currentNText);
-    const wpm = timeMin > 0 ? Math.max(0, Math.floor((instKeystrokes.total / 5 - mistakes) / timeMin)) : 0;
-    const rawWpm = timeMin > 0 ? Math.floor(instKeystrokes.total / 5 / timeMin) : 0;
-    const acc = instKeystrokes.total > 0 ? Math.floor(instKeystrokes.correct / instKeystrokes.total * 100) : 0;
+    const mistakes = getCompletedMistakes(
+        typedCorrectness, 
+        getClusterBoundaries(currentSequence), 
+        currentNText
+    );
+    
+    // Calculate metrics using standardized module
+    const wpm = WPMCalculator.calculateNetWPM(instKeystrokes.total, mistakes, timeMs);
+    const rawWpm = WPMCalculator.calculateRawWPM(instKeystrokes.total, timeMs);
+    const acc = WPMCalculator.calculateAccuracy(instKeystrokes.correct, instKeystrokes.total);
 
-    // Calculate Consistency (Coefficient of Variation) mapped to 0-100%
-    let consistency = 0;
-    if (instTypingState.wpmHistory.length > 2) {
-        const history = instTypingState.wpmHistory;
-        const mean = history.reduce((a, b) => a + b, 0) / history.length;
-        const variance = history.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / history.length;
-        const stdDev = Math.sqrt(variance);
-        const cv = stdDev / mean;
-        // Common mapping: 100% - CV%, clamped.
-        let unmapped = 100 - (cv * 100);
-        consistency = Math.max(0, Math.min(100, Math.round(unmapped)));
-    } else {
-        consistency = acc; // Fallback if too short
-    }
+    // Calculate consistency with proper null handling
+    const consistency = WPMCalculator.calculateConsistency(
+        instTypingState.wpmHistory,
+        null  // Return null if insufficient data (don't fallback to accuracy)
+    );
 
     document.getElementById('res-wpm').textContent = toBn(wpm);
     document.getElementById('res-acc').textContent = toBn(acc) + '%';
@@ -3531,7 +3546,13 @@ function showInstResults() {
     document.getElementById('res-char-e').textContent = toBn(extraChars);
     document.getElementById('res-char-m').textContent = toBn(missedChars);
 
-    document.getElementById('res-cons').textContent = toBn(consistency) + '%';
+    // Handle null consistency (session too short)
+    if (consistency !== null) {
+        document.getElementById('res-cons').textContent = toBn(consistency) + '%';
+    } else {
+        document.getElementById('res-cons').textContent = 'N/A';
+        document.getElementById('res-cons').title = 'Session too short for consistency measurement';
+    }
     document.getElementById('res-time').textContent = toBn(Math.round(timeSec)) + 's';
 
     // Validate session for gaming/cheating patterns
@@ -3539,7 +3560,7 @@ function showInstResults() {
         wpm: wpm,
         rawWpm: rawWpm,
         acc: acc,
-        consistency: consistency,
+        consistency: consistency !== null ? consistency : 0,
         timeMs: timeMs,
         totalKeystrokes: instKeystrokes.total,
         wrongKeystrokes: instKeystrokes.wrong,
