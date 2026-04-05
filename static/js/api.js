@@ -1,3 +1,18 @@
+/**
+ * API Service for Bangla Typer
+ * 
+ * Handles all API communication with retry logic and offline support.
+ * 
+ * Features:
+ * - Automatic retry on failure (up to 3 attempts)
+ * - Offline queue for failed requests (localStorage)
+ * - Process queued requests on page load
+ * 
+ * @module ApiService
+ * @version 1.0.0
+ * @date 2026-04-06
+ */
+
 import { state } from './state.js';
 
 const API_CONFIG = {
