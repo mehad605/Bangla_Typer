@@ -1,6 +1,6 @@
 [project]
 name = "bangla-typer"
-version = "1.0.0"
+version = "1.0.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -11,4 +11,3 @@ dependencies = [
     "uvicorn>=0.41.0",
     "yt-dlp>=2026.3.3",
 ]
-
