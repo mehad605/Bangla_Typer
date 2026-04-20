@@ -251,6 +251,40 @@ def init_db():
             )
         """)
 
+        # Performance indexes for frequent filters/sorts.
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_video_sessions_video_status_started "
+            "ON video_sessions(video_id, status, started_at DESC)"
+        )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_video_sessions_status_completed "
+            "ON video_sessions(status, completed_at DESC)"
+        )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_video_sessions_video_status_wpm "
+            "ON video_sessions(video_id, status, total_wpm DESC)"
+        )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_part_stats_history_timestamp "
+            "ON part_stats_history(timestamp)"
+        )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_part_stats_history_video_part_timestamp "
+            "ON part_stats_history(video_id, part_idx, timestamp DESC)"
+        )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_playlists_updated_at "
+            "ON playlists(updated_at DESC)"
+        )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_playlist_videos_playlist_position "
+            "ON playlist_videos(playlist_id, position)"
+        )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_instant_stats_timestamp "
+            "ON instant_stats(timestamp)"
+        )
+
         conn.commit()
 
 

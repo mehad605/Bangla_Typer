@@ -3950,6 +3950,7 @@ async function renderInstStatsView() {
     let sumRawWpm = 0;
     let sumAcc = 0;
     let sumConsistency = 0;
+    let consistencyCount = 0;
 
     const wpmData = [];
     const accData = [];
@@ -3959,15 +3960,18 @@ async function renderInstStatsView() {
     const avgWpm10 = last10.length > 0 ? (last10.reduce((s, h) => s + h.wpm, 0) / last10.length) : 0;
     const avgRawWpm10 = last10.length > 0 ? (last10.reduce((s, h) => s + (h.rawWpm || 0), 0) / last10.length) : 0;
     const avgAcc10 = last10.length > 0 ? (last10.reduce((s, h) => s + h.acc, 0) / last10.length) : 0;
-    const avgCons10 = last10.length > 0 ? (last10.reduce((s, h) => {
-        let c = h.consistency;
-        if (!c) {
-            const total = h.totalKeystrokes || h.totalChars || 0;
-            if (total > 0) c = Math.max(0, 100 - ((h.wrongChars || 0) / total) * 100);
-            else if (h.wpm > 0) c = h.acc;
+    const getConsistencyValue = (entry) => {
+        if (entry.consistency === null || entry.consistency === undefined) {
+            return null;
         }
-        return s + (c || 0);
-    }, 0) / last10.length) : 0;
+        return entry.consistency;
+    };
+    const last10Cons = last10
+        .map(getConsistencyValue)
+        .filter(v => typeof v === 'number');
+    const avgCons10 = last10Cons.length > 0
+        ? (last10Cons.reduce((s, v) => s + v, 0) / last10Cons.length)
+        : 0;
 
     const tbody = document.querySelector('#mt-recent-table tbody');
     tbody.innerHTML = '';
@@ -3986,15 +3990,12 @@ async function renderInstStatsView() {
         sumRawWpm += (h.rawWpm || 0);
         sumAcc += h.acc;
 
-        let consistency = h.consistency || 0;
-        if (!consistency) {
-            const total = h.totalKeystrokes || h.totalChars || 0;
-            if (total > 0) {
-                consistency = Math.max(0, 100 - ((h.wrongChars || 0) / total) * 100);
-            } else if (h.wpm > 0) consistency = h.acc;
+        const consistency = getConsistencyValue(h);
+        if (typeof consistency === 'number') {
+            if (consistency > maxCons) maxCons = consistency;
+            sumConsistency += consistency;
+            consistencyCount += 1;
         }
-        if (consistency > maxCons) maxCons = consistency;
-        sumConsistency += consistency;
 
         labels.push(index + 1);
         wpmData.push(h.wpm);
@@ -4026,13 +4027,7 @@ async function renderInstStatsView() {
         const tr = document.createElement('tr');
         const d = new Date(h.timestamp);
 
-        let cons = h.consistency || 0;
-        if (!cons) {
-            const total = h.totalKeystrokes || h.totalChars || 0;
-            if (total > 0) {
-                cons = Math.max(0, 100 - ((h.wrongChars || 0) / total) * 100);
-            } else if (h.wpm > 0) cons = h.acc;
-        }
+        const cons = getConsistencyValue(h);
 
         const timeStr = `${d.getDate().toString().padStart(2, '0')} ${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 
@@ -4040,7 +4035,7 @@ async function renderInstStatsView() {
                     <td class="wpm-cell">${Math.round(h.wpm)}</td>
                     <td>${Math.round(h.rawWpm || 0)}</td>
                     <td class="acc-cell">${Math.round(h.acc)}%</td>
-                    <td>${cons.toFixed(1)}%</td>
+                    <td>${cons === null ? 'N/A' : `${cons.toFixed(1)}%`}</td>
                     <td title="correct / incorrect / extra / missed">${h.correctChars || 0}/${h.wrongChars || 0}/${h.extraChars || 0}/${h.missedChars || 0}</td>
                     <td class="date-cell">${timeStr}</td>
                 `;
@@ -4050,7 +4045,7 @@ async function renderInstStatsView() {
     const avgWpm = history.length > 0 ? (sumWpm / history.length) : 0;
     const avgRawWpm = history.length > 0 ? (sumRawWpm / history.length) : 0;
     const avgAcc = history.length > 0 ? (sumAcc / history.length) : 0;
-    const avgCons = history.length > 0 ? (sumConsistency / history.length) : 0;
+    const avgCons = consistencyCount > 0 ? (sumConsistency / consistencyCount) : 0;
 
     const seconds = Math.floor(totalTimeTyping % 60);
     const minutes = Math.floor((totalTimeTyping / 60) % 60);

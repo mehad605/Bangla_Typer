@@ -617,10 +617,10 @@ def update_stats(vid: str, part_idx: int, req: StatRequest):
         )
 
         # Insert history (legacy table, optionally kept for records)
-        # Use minimum 100ms threshold to prevent unrealistic WPM values
-        mins = max(req.time_ms / 60000.0, 0.1) if req.time_ms > 0 else 1.0
+        # Use minimum 100ms threshold to avoid divide-by-zero while keeping formula consistent.
+        mins = max(req.time_ms / 60000.0, 100 / 60000.0) if req.time_ms > 0 else 0
         # Net WPM = ((Total Keystrokes / 5) - Word-Level Mistakes) / Time in Minutes
-        wpm = int((req.total_keys / 5.0 - req.mistakes) / mins)
+        wpm = int((req.total_keys / 5.0 - req.mistakes) / mins) if mins > 0 else 0
         wpm = max(0, wpm)
         acc = (
             int((req.correct_keys / req.total_keys) * 100)

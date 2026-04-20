@@ -63,15 +63,15 @@ If you are a developer or want to experiment with the latest code:
 git clone https://github.com/mehad605/Bangla_Typer.git
 cd Bangla_Typer
 
-# Using uv (High Performance)
+# Install dependencies
 uv sync
-uv run gui.py
+npm install
 
-# OR Using standard pip
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install .
-python gui.py
+# Run desktop app (Tauri + FastAPI sidecar)
+npm run dev
+
+# Backend only (optional)
+uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ---
@@ -121,7 +121,8 @@ The application stores settings and progress in a `config.json` file.
 
 ## 🏗️ Technical Stack
 - **Backend Core**: FastAPI for internal communication.
-- **UI Framework**: PySide6 (Qt) for high-performance desktop graphics.
+- **Desktop Shell**: Tauri v2 (Rust).
+- **Frontend**: Vanilla JavaScript + HTML/CSS.
 - **Automation**: GitHub Actions for CI/CD and multi-platform packaging.
 
 ---
@@ -129,14 +130,14 @@ The application stores settings and progress in a `config.json` file.
 ## 💡 Troubleshooting
 - **rpmbuild not found**: Non-critical. RPM creation will be skipped on systems without `rpm`.
 - **appimagetool not found**: The build script attempts to auto-download this if missing.
-- **UI Scaling**: On high-DPI Linux displays, you may need to set `export QT_AUTO_SCREEN_SCALE_FACTOR=1`.
+- **Sidecar start issues**: Run `uv sync` and retry `npm run dev` so Python dependencies are available.
 
 ---
 
 ## 🤝 Contributing
 1. **Fork** the repository.
 2. **Create a Branch** for your feature or fix.
-3. **Submit a PR**. Check [CHANGES.md](CHANGES.md) for the project's evolution.
+3. **Submit a PR**. Check [CHANGELOG.md](CHANGELOG.md) for recent project updates.
 
 ---
 

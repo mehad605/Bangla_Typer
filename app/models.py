@@ -6,7 +6,7 @@ class InstantStatRequest(BaseModel):
     wpm: int
     rawWpm: int
     acc: int
-    consistency: int
+    consistency: int | None
     timeMs: int
     correctChars: int
     wrongChars: int

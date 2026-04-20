@@ -36,7 +36,7 @@ git push origin v1.0.0
 Once the release is created, download the tarball and update checksums:
 
 ```bash
-cd /home/maruf/0-My_Projects/Bangla_Typer
+cd /path/to/Bangla_Typer
 
 # Download the release tarball (replace with actual release URL)
 wget https://github.com/mehad605/Bangla_Typer/releases/download/v1.0.0/bangla-typer-1.0.0.tar.gz
@@ -156,7 +156,7 @@ install: cannot stat '/.../LICENSE': No such file or directory
    - Removed incorrect source array entries (desktop, LICENSE URL)
    - Simplified to single source: tarball only
    - Fixed package() to work with new tarball structure
-   - Changed maintainer email to mehad605@gmail.com
+   - Updated maintainer metadata in PKGBUILD-bin
    - Added proper extraction: `cd ${srcdir}/bangla-typer-${pkgver}`
 
 3. **CHANGES.md** (updated)
@@ -195,7 +195,7 @@ install: cannot stat '/.../LICENSE': No such file or directory
 - GitHub Actions workflows are enabled
 
 ⚠️ **During AUR Submission:**
-- Replace `# Maintainer: Your Name <mehad605@gmail.com>` with your actual name
+- Replace `# Maintainer: Your Name <your-email@example.com>` with your actual maintainer details
 - Test the package locally before pushing to AUR
 - Add optional dependencies if needed
 

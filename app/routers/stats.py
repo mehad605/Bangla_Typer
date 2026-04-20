@@ -40,6 +40,24 @@ def add_inst_stat(req: InstantStatRequest):
         return {"status": "db_error"}
 
 
+@router.get("/inst_stats")
+def get_inst_stats():
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, timestamp, wpm, rawWpm, acc, consistency, timeMs,
+                       correctChars, wrongChars, extraChars, missedChars,
+                       totalKeystrokes, isValid, validationFlags
+                FROM instant_stats
+                ORDER BY timestamp ASC
+            """
+            ).fetchall()
+            return [dict(r) for r in rows]
+    except sqlite3.OperationalError:
+        return []
+
+
 @router.get("/yt_stats")
 def get_yt_stats():
     try:

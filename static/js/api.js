@@ -13,8 +13,6 @@
  * @date 2026-04-06
  */
 
-import { state } from './state.js';
-
 const API_CONFIG = {
     MAX_RETRIES: 3,
     RETRY_DELAY_MS: 1000,
@@ -125,4 +123,8 @@ class ApiService {
     }
 }
 
-export const api = new ApiService();
+const api = new ApiService();
+
+if (typeof window !== 'undefined') {
+    window.api = api;
+}

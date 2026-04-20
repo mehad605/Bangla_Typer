@@ -90,3 +90,8 @@ desktop.ini
 
 # Logs
 *.log
+
+# Local agent/session artifacts
+.codex
+AGENTS.md
+SPRINT_VERIFICATION_REPORT.md
