@@ -28,6 +28,18 @@ Traditional typing tutors often treat Bangla like English, ignoring its phonetic
 
 ---
 
+## 📸 Screenshots
+
+| Content Library | Playlist Chapters |
+|:---:|:---:|
+| <img src="Assets/Screenshots/content-library.png" width="400" alt="Content Library"> | <img src="Assets/Screenshots/playlist-chapters.png" width="400" alt="Playlist Chapters"> |
+
+| Instant Mode Typing | YouTube Mode Typing |
+|:---:|:---:|
+| <img src="Assets/Screenshots/typing-area-instant.png" width="400" alt="Instant Mode"> | <img src="Assets/Screenshots/typing-area-youtube.png" width="400" alt="YouTube Mode"> |
+
+---
+
 ## ✨ Features
 
 ### 📂 Content Mastery
