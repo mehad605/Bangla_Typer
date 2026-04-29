@@ -1295,11 +1295,9 @@
 
         /* Specifically for screens with headers to allow internal layout matching specs */
         #app-youtube #screen-console.active,
-        #app-youtube #screen-detail.active,
         #app-youtube #screen-playlist-detail.active {
             display: flex;
             flex-direction: column;
-            overflow: hidden;
             padding-top: 0;
         }
 

@@ -87,5 +87,9 @@ pub fn run() {
 }
 
 fn main() {
+    if cfg!(target_os = "linux") {
+        std::env::set_var("GDK_BACKEND", "x11");
+        std::env::set_var("WAYLAND_DISPLAY", "");
+    }
     run();
 }
