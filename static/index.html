@@ -52,6 +52,7 @@
         <div class="mode-tabs">
             <button class="mode-tab active" id="tab-instant" onclick="switchMode('instant')">⚡ Instant</button>
             <button class="mode-tab" id="tab-youtube" onclick="switchMode('youtube')">▶ YouTube</button>
+            <button class="mode-tab" id="tab-learn" onclick="switchMode('learn')">🎓 Learn</button>
         </div>
 
         <div class="header-right">
@@ -109,7 +110,7 @@
             <div class="main-wrap">
                 <div class="top-bar">
                     <div class="controls">
-                        <button class="btn" id="btn-new" onclick="loadNewText()">↺ নতুন</button>
+                        <button class="btn" id="btn-new" onclick="loadNewText()">✦ নতুন</button>
                         <button class="btn" id="btn-reset" onclick="resetTyping()">⟳ রিসেট</button>
                         <div class="hints-wrap">
                             <button class="btn" id="btn-hints" onclick="toggleHintsPanel()">⚙ Hints ▾</button>
@@ -589,23 +590,13 @@
                     <span class="sep">/</span>
                     <a id="console-bc-video" onclick="goBackToDetail()">Title</a>
                     <span class="sep">/</span>
-                    <span id="console-bc-part" style="color:var(--text); font-weight:700;">অধ্যায়
+                    <span id="console-bc-part" style="color:var(--text); font-weight:700;">অধ্যায়
                         ১</span>
                 </div>
 
-                <!-- Right stats (Translated Numerals) -->
-                <div class="console-stats" style="gap: 1.5rem;">
+                <div class="console-stats">
                     <div class="console-stat">
                         <span id="stat-pos" style="color:var(--subtext);">পাতা ১/১</span>
-                    </div>
-                    <span style="color:var(--border)">|</span>
-                    <div class="console-stat">
-                        <span class="console-stat-val" id="stat-wpm">০</span>
-                        <span style="font-size:0.65rem; color:var(--subtext);">শব্দ/মিনিট</span>
-                    </div>
-                    <div class="console-stat">
-                        <span class="console-stat-val" id="stat-acc">১০০%</span>
-                        <span style="font-size:0.65rem; color:var(--subtext);">সঠিকতা</span>
                     </div>
                 </div>
             </div>
@@ -658,6 +649,10 @@
                             <span>✓ <span class="stat-val stat-correct" id="yt-stat-keys-correct">০</span></span>
                             <span>✗ <span class="stat-val stat-wrong" id="yt-stat-keys-wrong">০</span></span>
                         </div>
+                        <div style="display:flex; gap: 0.8rem; font-size: 0.95em; color: var(--accent); margin-top: 2px;">
+                            <span>গতি (WPM): <span class="stat-val stat-correct" id="yt-stat-wpm">০</span></span>
+                            <span>সঠিকতা: <span class="stat-val stat-correct" id="yt-stat-acc">১০০%</span></span>
+                        </div>
                     </div>
                 </div>
 
@@ -705,6 +700,13 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     LEARN APP MODE
+══════════════════════════════════════ -->
+    <div id="app-learn" style="display: none; flex-direction: column; width: 100%; height: 100%;">
+        <!-- Learn screens will be injected here by learn.js -->
     </div>
 
     <!-- ══════════════════════════════════════
@@ -1140,6 +1142,86 @@ Upload Date: 12/03/2026
         </div>
     </div>
 
+    <!-- ══════════════════════════════════════
+     MODAL (Learn Mode Results)
+    ══════════════════════════════════════ -->
+    <div class="modal-overlay" id="modal-learn-results">
+        <div class="modal" style="max-width: 1000px; width: 95%; padding: 2rem;">
+            <!-- Status Header -->
+            <div id="learn-res-header" style="text-align: center; margin-bottom: 2rem; padding: 1rem; border-radius: var(--radius-lg); background: rgba(0,0,0,0.2); border: 2px solid transparent;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
+                    <div id="learn-res-status-icon" style="font-size: 2.5rem;">🎉</div>
+                    <div id="learn-res-status-msg" style="font-size: 1.4rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">Target Met!</div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 2.5rem; align-items: stretch;">
+                <!-- Left: Stats Column -->
+                <div style="flex: 0 0 350px; display: flex; flex-direction: column; gap: 1.5rem;">
+                    <!-- WPM Comparison Block -->
+                    <div style="background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden;">
+                        <div style="text-align: center; padding: 0.6rem; background: var(--surface2); border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; color: var(--subtext);">WPM</div>
+                        <div style="display: flex; align-items: center;">
+                            <!-- Achieved -->
+                            <div style="flex: 1; padding: 1.5rem; text-align: center; border-right: 1px solid var(--border);">
+                                <div class="res-label" style="font-size: 0.65rem; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--accent);">Achieved</div>
+                                <div class="res-val-big" id="learn-res-wpm" style="font-size: 4rem; line-height: 1;">0</div>
+                            </div>
+                            <!-- Target -->
+                            <div style="flex: 1; padding: 1.5rem; text-align: center;">
+                                <div class="res-label" style="font-size: 0.65rem; text-transform: uppercase; margin-bottom: 0.5rem;">Target</div>
+                                <div class="res-val" id="learn-res-target-wpm" style="font-size: 3rem; color: var(--subtext); font-weight: 400;">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secondary Stats Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: var(--surface); padding: 1.2rem; border-radius: var(--radius-md); border: 1px solid var(--border); text-align: center;">
+                            <div class="res-label" style="font-size: 0.7rem; text-transform: uppercase; margin-bottom: 0.4rem;">Accuracy</div>
+                            <div id="learn-res-acc" style="font-size: 1.8rem; color: var(--correct); font-weight: 700;">0%</div>
+                        </div>
+                        <div style="background: var(--surface); padding: 1.2rem; border-radius: var(--radius-md); border: 1px solid var(--border); text-align: center;">
+                            <div class="res-label" style="font-size: 0.7rem; text-transform: uppercase; margin-bottom: 0.4rem;">Time</div>
+                            <div id="learn-res-time" style="font-size: 1.8rem; color: var(--text); font-weight: 700;">0s</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Chart Column -->
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="res-label" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.8rem;">Performance History</div>
+                    <div style="flex: 1; background: rgba(0,0,0,0.1); border-radius: var(--radius-lg); padding: 1.5rem; border: 1px solid var(--border); min-height: 350px;">
+                        <canvas id="learnWpmChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer: Actions & Details -->
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 2.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--subtext);">
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <span style="font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">correct</span>
+                        <span id="learn-res-char-c" style="color: var(--correct); font-size: 1.2rem; font-weight: 700;">0</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <span style="font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">errors</span>
+                        <span id="learn-res-char-i" style="color: var(--wrong); font-size: 1.2rem; font-weight: 700;">0</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <span style="font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">extra</span>
+                        <span id="learn-res-char-e" style="color: var(--yellow); font-size: 1.2rem; font-weight: 700;">0</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem;">
+                    <button class="res-btn" onclick="retryLearnLesson()" style="background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 0.8rem 2rem;"><span>↺</span> আবার চেষ্টা করুন</button>
+                    <button class="res-btn" onclick="finishLearnLesson()" style="background: var(--accent); color: var(--bg); font-weight: 700; padding: 0.8rem 2.5rem;"><span>➜</span> শেষ করুন</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Desktop app bridge (must load before app.js) -->
     <script src="static/js/tauri-bridge.js"></script>
     <!-- WPM Calculator Module (must load before app.js) -->
@@ -1151,6 +1233,7 @@ Upload Date: 12/03/2026
     <!-- Modular JS -->
     <script src="static/js/app.js"></script>
     <script src="static/js/playlist.js"></script>
+    <script src="static/js/learn.js"></script>
 </body>
 
 </html>

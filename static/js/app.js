@@ -63,27 +63,43 @@ function switchMode(mode) {
     currentMode = mode;
     const tabInstant = document.getElementById('tab-instant');
     const tabYoutube = document.getElementById('tab-youtube');
+    const tabLearn = document.getElementById('tab-learn');
     const appInstant = document.getElementById('app-instant');
     const appYoutube = document.getElementById('app-youtube');
+    const appLearn = document.getElementById('app-learn');
     const instTabsContainer = document.getElementById('inst-tabs-container');
     const ytNav = document.getElementById('yt-nav-unified');
 
+    // Reset tabs
+    if(tabInstant) tabInstant.classList.remove('active');
+    if(tabYoutube) tabYoutube.classList.remove('active');
+    if(tabLearn) tabLearn.classList.remove('active');
+    
+    // Hide apps
+    if(appInstant) appInstant.style.display = 'none';
+    if(appYoutube) appYoutube.style.display = 'none';
+    if(appLearn) appLearn.style.display = 'none';
+
     if (mode === 'instant') {
-        tabInstant.classList.add('active');
-        tabYoutube.classList.remove('active');
-        appInstant.style.display = 'flex';
-        appYoutube.style.display = 'none';
+        if(tabInstant) tabInstant.classList.add('active');
+        if(appInstant) appInstant.style.display = 'flex';
         if (instTabsContainer) instTabsContainer.style.display = 'flex';
         if (ytNav) ytNav.style.display = 'none';
         focusInput();
-    } else {
-        tabYoutube.classList.add('active');
-        tabInstant.classList.remove('active');
-        appYoutube.style.display = 'flex';
-        appInstant.style.display = 'none';
+    } else if (mode === 'youtube') {
+        if(tabYoutube) tabYoutube.classList.add('active');
+        if(appYoutube) appYoutube.style.display = 'flex';
         if (instTabsContainer) instTabsContainer.style.display = 'none';
         showScreen(activeYTScreen);
         if (activeYTScreen === 'console') focusYTTyping();
+    } else if (mode === 'learn') {
+        if(tabLearn) tabLearn.classList.add('active');
+        if(appLearn) appLearn.style.display = 'flex';
+        if (instTabsContainer) instTabsContainer.style.display = 'none';
+        if (ytNav) ytNav.style.display = 'none';
+        setTimeout(() => {
+            if (window.restoreLearnView) window.restoreLearnView();
+        }, 50);
     }
 }
 
@@ -1872,8 +1888,8 @@ function updateYTWpm() {
     let wpm = mins > 0 ? Math.max(0, Math.floor((ytKeystrokes.total / 5 - totalMistakes) / mins)) : 0;
     const acc = ytKeystrokes.total > 0 ? Math.floor(ytKeystrokes.correct / ytKeystrokes.total * 100) : 100;
 
-    document.getElementById('stat-wpm').textContent = toBn(wpm);
-    document.getElementById('stat-acc').textContent = toBn(acc) + '%';
+    document.getElementById('yt-stat-wpm').textContent = toBn(wpm);
+    document.getElementById('yt-stat-acc').textContent = toBn(acc) + '%';
 
     // Show page-level character stats in right panel
     if (document.getElementById('yt-stat-chars')) {
@@ -3163,6 +3179,11 @@ function highlightKeysForStep(step, prefix = '') {
     document.querySelectorAll(`.${prefix}key-rect`).forEach(k => {
         const id = k.id.replace(`${prefix}rect-`, '');
         k.classList.remove('active');
+        const keyData = rows.flat().find(r => r.id === id);
+        if (keyData) k.setAttribute('fill', keyData.color);
+        k.removeAttribute('stroke');
+        k.removeAttribute('stroke-width');
+        k.style.filter = '';
         ['eng', 'tl', 'tr', 'bl', 'br', 'main'].forEach(p => {
             const el = document.getElementById(`${prefix}${p}-${id}`);
             if (el) el.style.fill = '';
@@ -3186,13 +3207,18 @@ function highlightKeysForStep(step, prefix = '') {
 }
 
 function activateKey(id, prefix = '') {
-    const glowId = prefix ? 'yt-tog-glow' : 'tog-glow';
+    const glowId = prefix === 'yt-' ? 'yt-tog-glow' : (prefix === 'learn-' ? 'learn-tog-glow' : 'tog-glow');
     const glow = document.getElementById(glowId)?.checked;
     if (!glow) return;
 
     const rect = document.getElementById(`${prefix}rect-${id}`);
     if (rect) {
         rect.classList.add('active');
+        rect.setAttribute('fill', '#ffffff');
+        rect.setAttribute('stroke', '#ffffff');
+        rect.setAttribute('stroke-width', '2.5');
+        const accent = getThemeColor('--accent');
+        rect.style.filter = `drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px ${accent}) drop-shadow(0 0 24px ${accent})`;
         ['eng', 'tl', 'tr', 'bl', 'br', 'main'].forEach(p => {
             const el = document.getElementById(`${prefix}${p}-${id}`);
             if (el) el.style.fill = getThemeColor('--bg');
@@ -4345,6 +4371,11 @@ fetchLibrary();
 // Render modular SVG keyboards
 drawKeyboard('yt-svg-container', 'yt-');
 drawKeyboard('svg-container', '');
+
+// Initialize learn mode (hidden until tab clicked)
+setTimeout(() => {
+    if (window.initLearnMode) window.initLearnMode();
+}, 0);
 
 // Search Input Listener
 const ytSearchInput = document.getElementById('yt-library-search');

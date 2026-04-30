@@ -267,3 +267,56 @@ if (typeof window !== 'undefined') {
     window.WPMCalculator = WPMCalculator;
     window.KEYSTROKES_PER_WORD = KEYSTROKES_PER_WORD;
 }
+
+// ============================================================================
+// WpmCalculator Class (for use with TypingEngine and learn.js)
+// ============================================================================
+
+class WpmCalculator {
+    constructor() {
+        this.startTime = null;
+        this.endTime = null;
+    }
+
+    start() {
+        this.startTime = Date.now();
+        this.endTime = null;
+    }
+
+    stop() {
+        if (this.startTime && !this.endTime) {
+            this.endTime = Date.now();
+        }
+    }
+
+    reset() {
+        this.startTime = null;
+        this.endTime = null;
+    }
+
+    getElapsedTimeMs() {
+        if (!this.startTime) return 0;
+        const end = this.endTime || Date.now();
+        return end - this.startTime;
+    }
+
+    getStats(totalKeystrokes, correctKeystrokes, mistakes) {
+        const timeMs = this.getElapsedTimeMs();
+
+        if (timeMs <= 0) {
+            return { wpm: 0, accuracy: 100 };
+        }
+
+        const timeMin = timeMs / 60000;
+        const grossWPM = (totalKeystrokes / KEYSTROKES_PER_WORD) / timeMin;
+        const netWPM = Math.max(0, Math.floor(grossWPM - (mistakes / timeMin)));
+        const accuracy = totalKeystrokes > 0 ? Math.floor((correctKeystrokes / totalKeystrokes) * 100) : 100;
+
+        return { wpm: netWPM, accuracy };
+    }
+}
+
+// Export the class for the browser
+if (typeof window !== 'undefined') {
+    window.WpmCalculator = WpmCalculator;
+}
