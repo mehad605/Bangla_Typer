@@ -237,6 +237,18 @@ function renderLessonDetail() {
                 <div style="color: var(--subtext); margin-bottom: 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Characters in this lesson</div>
                 <div style="font-size: 1.8rem; color: var(--accent); letter-spacing: 8px; font-weight: 500;">${currentLearnLesson.chars.join(' ')}</div>
             </div>
+
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 6px; color: var(--subtext);">
+                    <div style="width: 10px; height: 10px; border-radius: 2px; background: var(--border);"></div> Untouched
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; color: var(--subtext);">
+                    <div style="width: 10px; height: 10px; border-radius: 2px; background: var(--yellow);"></div> Unbeaten
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; color: var(--subtext);">
+                    <div style="width: 10px; height: 10px; border-radius: 2px; background: var(--correct);"></div> Beaten
+                </div>
+            </div>
             
             <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 800px; margin: 0 auto;">
     `;
@@ -246,19 +258,23 @@ function renderLessonDetail() {
         const prog = learnProgress[progKey] || { started: false, completed: false, bestWpm: 0, lastWpm: null };
         
         let statusColor = 'var(--border)';
+        let shadowColor = 'transparent';
+        
         if (prog.completed) {
-            if (diff.id === 'very_hard') statusColor = 'var(--correct)';
-            else if (diff.id === 'hard') statusColor = 'var(--purple)';
-            else if (diff.id === 'medium') statusColor = 'var(--yellow)';
-            else if (diff.id === 'easy') statusColor = 'var(--blue)';
+            statusColor = 'var(--correct)';
+            shadowColor = 'var(--correct)';
         } else if (prog.started) {
-            statusColor = 'var(--surface3)';
+            statusColor = 'var(--yellow)';
+            shadowColor = 'var(--yellow)';
         }
 
         html += `
-            <div style="background: var(--surface); border: 2px solid ${statusColor}; padding: 1.2rem 1.5rem; border-radius: 12px; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: space-between; box-shadow: ${prog.completed ? `0 0 10px ${statusColor}22` : 'none'};" onclick="window.startLearnTyping('${diff.id}')">
+            <div style="background: var(--surface); border: 2px solid ${statusColor}; padding: 1.2rem 1.5rem; border-radius: 12px; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 0 12px ${shadowColor}1A;" onclick="window.startLearnTyping('${diff.id}')">
                 <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <h3 style="margin:0; color: ${prog.completed ? statusColor : 'var(--text)'}; font-size: 1.2rem;">${diff.name}</h3>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h3 style="margin:0; color: var(--text); font-size: 1.2rem;">${diff.name}</h3>
+                        ${prog.completed ? '<span style="font-size: 0.65rem; background: var(--correct); color: var(--bg); padding: 2px 6px; border-radius: 4px; font-weight: bold; font-family: \'JetBrains Mono\', monospace;">BEATEN</span>' : (prog.started ? '<span style="font-size: 0.65rem; background: var(--yellow); color: var(--bg); padding: 2px 6px; border-radius: 4px; font-weight: bold; font-family: \'JetBrains Mono\', monospace;">UNBEATEN</span>' : '')}
+                    </div>
                     <div style="color: var(--subtext); font-size: 0.85rem; font-family: 'JetBrains Mono', monospace;">Target WPM: <span style="color:var(--accent); font-weight:bold;">${toBn(diff.wpm)}</span></div>
                 </div>
                 
