@@ -439,6 +439,11 @@ window.handleLearnInput = function(e) {
         const prevStep = learnSequence[learnCurrentIndex];
         const bounds = getClusterBoundaries(learnSequence);
         const ci = bounds.findIndex(b => b.end === prevStep.clusterEnd || b.end === prevStep.targetEnd);
+        
+        // Note: totalKeystrokes is NOT decremented on Backspace.
+        // This is industry standard: accuracy = correct / total_physical_keystrokes.
+        // But we must decrease the 'correct' or 'wrong' counter to keep total = correct + wrong + extra.
+        // Actually, let's keep it simple: total only increases, but we track correct/wrong at the end.
         if (ci >= 0 && learnTypedCorrectness[ci] !== undefined) {
             if (learnTypedCorrectness[ci] === true) learnKeystrokes.correct--;
             else if (learnTypedCorrectness[ci] === false) learnKeystrokes.wrong--;
@@ -457,14 +462,16 @@ window.handleLearnInput = function(e) {
         if (learnTypingInterval) clearInterval(learnTypingInterval);
         learnTypingInterval = setInterval(() => {
             const tot = learnKeystrokes.total - learnTypingState.lastTotal;
+            const corr = learnKeystrokes.correct - learnTypingState.lastCorr;
             const err = learnKeystrokes.wrong - learnTypingState.lastErr;
             const mists = getCompletedMistakes(learnTypedCorrectness, getClusterBoundaries(learnSequence), learnNText);
             const mistakesInInterval = mists - learnTypingState.lastMistakes;
-            const { netWPM } = WPMCalculator.calculateIntervalWPM(tot, mistakesInInterval, 1000);
+            const { netWPM } = WPMCalculator.calculateIntervalWPM(tot, mistakesInInterval, 1000, corr);
 
             learnTypingState.wpmHistory.push(netWPM);
             learnTypingState.errHistory.push(err);
             learnTypingState.lastTotal = learnKeystrokes.total;
+            learnTypingState.lastCorr = learnKeystrokes.correct;
             learnTypingState.lastErr = learnKeystrokes.wrong;
             learnTypingState.lastMistakes = mists;
             updateLearnStats();
@@ -534,7 +541,7 @@ function updateLearnStats() {
         const elapsedMs = Date.now() - learnTypingState.startTime;
         if (elapsedMs > 0) {
             const mists = getCompletedMistakes(learnTypedCorrectness, getClusterBoundaries(learnSequence), learnNText);
-            currentWpm = WPMCalculator.calculateNetWPM(learnKeystrokes.total, mists, elapsedMs);
+            currentWpm = WPMCalculator.calculateNetWPM(learnKeystrokes.total, mists, elapsedMs, learnKeystrokes.correct);
         }
     }
     if (learnKeystrokes.total > 0) currentAcc = WPMCalculator.calculateAccuracy(learnKeystrokes.correct, learnKeystrokes.total);
@@ -549,7 +556,7 @@ function finishLearnTyping() {
     
     const timeMs = Math.max(0, learnTypingState.endTime - learnTypingState.startTime);
     const mistakes = getCompletedMistakes(learnTypedCorrectness, getClusterBoundaries(learnSequence), learnNText);
-    const wpm = WPMCalculator.calculateNetWPM(learnKeystrokes.total, mistakes, timeMs);
+    const wpm = WPMCalculator.calculateNetWPM(learnKeystrokes.total, mistakes, timeMs, learnKeystrokes.correct);
     const acc = WPMCalculator.calculateAccuracy(learnKeystrokes.correct, learnKeystrokes.total);
     
     const progKey = `${currentLearnLesson.id}_${currentDifficulty.id}`;
@@ -571,13 +578,30 @@ function showLearnResults(wpm, acc, timeMs) {
     document.getElementById('learn-res-target-wpm').textContent = toBn(targetWpm);
     document.getElementById('learn-res-time').textContent = toBn(Math.round(timeMs / 1000)) + 's';
     
-    const correctChars = learnTypedCorrectness.filter(v => v === true).length;
-    const wrongChars = learnTypedCorrectness.filter(v => v === false).length;
-    const extraChars = Math.max(0, learnKeystrokes.wrong - wrongChars);
-    
-    document.getElementById('learn-res-char-c').textContent = toBn(correctChars);
-    document.getElementById('learn-res-char-i').textContent = toBn(wrongChars);
-    document.getElementById('learn-res-char-e').textContent = toBn(extraChars);
+    // Keystroke-level stats only
+    const totalKeys = learnKeystrokes.total;
+    const correctKeys = learnKeystrokes.correct;
+    const wrongKeys = learnKeystrokes.wrong;
+
+    const statsContainer = document.getElementById('learn-res-bottom-stats');
+    if (statsContainer) {
+        statsContainer.innerHTML = `
+            <div style="display:flex; gap: 2.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--subtext);">
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <span style="font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">total keys</span>
+                    <span style="color: var(--text); font-size: 1.4rem; font-weight: 700;">${toBn(totalKeys)}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <span style="font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">correct</span>
+                    <span style="color: var(--correct); font-size: 1.4rem; font-weight: 700;">${toBn(correctKeys)}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <span style="font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">wrong</span>
+                    <span style="color: var(--wrong); font-size: 1.4rem; font-weight: 700;">${toBn(wrongKeys)}</span>
+                </div>
+            </div>
+        `;
+    }
     
     const header = document.getElementById('learn-res-header');
     const icon = document.getElementById('learn-res-status-icon');

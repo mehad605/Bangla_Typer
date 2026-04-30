@@ -1755,10 +1755,10 @@ document.getElementById('yt-console-input').addEventListener('keydown', e => {
             const mistakes = ytKeystrokes.mistakes || 0;
             /**
              * Final Part Stats Net WPM:
-             * Net WPM = ((Total Keystrokes / 5) - Word-Level Mistakes) / Minutes
-             * Sent to server for session aggregation and best score tracking.
+             * Net WPM = (Correct Keystrokes / 5) / Minutes
+             * Standard industry formula to prevent gaming.
              */
-            const wpm = mins > 0 ? Math.max(0, Math.floor((ytKeystrokes.total / 5.0 - mistakes) / mins)) : 0;
+            const wpm = WPMCalculator.calculateNetWPM(ytKeystrokes.total, mistakes, elapsed, ytKeystrokes.correct);
             const acc = ytKeystrokes.total > 0 ? Math.floor(ytKeystrokes.correct / ytKeystrokes.total * 100) : 100;
             const isCompleted = (currentPartIdx + 1 >= v.parts.length);
             const totalPagesInPart = part.pages ? part.pages.length : 1;
@@ -1881,11 +1881,11 @@ function updateYTWpm() {
 
     /**
      * YouTube Mode Net WPM:
-     * Net WPM = ((Total Keystrokes / 5) - Word-Level Mistakes) / Minutes
+     * Net WPM = (Correct Keystrokes / 5) / Minutes
      * 
-     * Uses cumulative mistakes across parts/pages for accurate session-wide metrics.
+     * Uses standardized calculation to prevent gaming.
      */
-    let wpm = mins > 0 ? Math.max(0, Math.floor((ytKeystrokes.total / 5 - totalMistakes) / mins)) : 0;
+    let wpm = WPMCalculator.calculateNetWPM(ytKeystrokes.total, totalMistakes, elapsed, ytKeystrokes.correct);
     const acc = ytKeystrokes.total > 0 ? Math.floor(ytKeystrokes.correct / ytKeystrokes.total * 100) : 100;
 
     document.getElementById('yt-stat-wpm').textContent = toBn(wpm);
@@ -1998,7 +1998,7 @@ async function confirmResetPart() {
                 const totTime = remainingParts.reduce((s, p) => s + (p.cur_time_ms || 0), 0);
                 const totMins = totTime / 60000.0;
                 if (totMins > 0 && totKeys > 0) {
-                    v.cur_wpm = Math.max(0, Math.floor((totKeys / 5.0 - totMistakes) / totMins));
+                    v.cur_wpm = WPMCalculator.calculateNetWPM(totKeys, totMistakes, totTime, totCkeys);
                     v.cur_acc = Math.floor((totCkeys / totKeys) * 100);
                 } else {
                     v.cur_wpm = null;
@@ -2233,11 +2233,11 @@ function showYTSummary(v) {
 
     // Calculate session overall WPM (cumulative, not average of averages)
     let totalKeys = ytSessionResults.reduce((sum, p) => sum + (p.keys || 0), 0);
-    let totalMistakes = ytSessionResults.reduce((sum, p) => sum + (p.mistakes || 0), 0);
-    let totalMins = ytSessionResults.reduce((sum, p) => sum + (p.timeMs || 0), 0) / 60000;
-    let sessionWpm = totalMins > 0 ? Math.max(0, Math.floor((totalKeys / 5 - totalMistakes) / totalMins)) : 0;
-
     let totalCKeys = ytSessionResults.reduce((sum, p) => sum + (p.ckeys || 0), 0);
+    let totalMistakes = ytSessionResults.reduce((sum, p) => sum + (p.mistakes || 0), 0);
+    let totalTimeMs = ytSessionResults.reduce((sum, p) => sum + (p.timeMs || 0), 0);
+    let sessionWpm = WPMCalculator.calculateNetWPM(totalKeys, totalMistakes, totalTimeMs, totalCKeys);
+
     let sessionAcc = totalKeys > 0 ? Math.floor((totalCKeys / totalKeys) * 100) : 100;
 
     // Get previous best overall WPM from video data (best session's total_wpm)
@@ -3310,10 +3310,12 @@ document.getElementById('hidden-input').addEventListener('keydown', e => {
              * Uses WPMCalculator.calculateIntervalWPM() for consistency with
              * other WPM calculations in the application.
              */
+            const corrInInterval = instKeystrokes.correct - instTypingState.lastCorr;
             const { netWPM, rawWPM } = WPMCalculator.calculateIntervalWPM(
                 tot,                // Keystrokes in this 1-second interval
                 mistakesInInterval, // Mistakes in this 1-second interval
-                1000                // Interval duration (1 second)
+                1000,               // Interval duration (1 second)
+                corrInInterval      // Correct keystrokes in interval
             );
 
             instTypingState.wpmHistory.push(netWPM);
@@ -3419,7 +3421,8 @@ function updateStats() {
             currentWpm = WPMCalculator.calculateNetWPM(
                 instKeystrokes.total,
                 mistakes,
-                elapsedMs
+                elapsedMs,
+                instKeystrokes.correct
             );
         }
     }
@@ -3550,7 +3553,7 @@ function showInstResults() {
     );
     
     // Calculate metrics using standardized module
-    const wpm = WPMCalculator.calculateNetWPM(instKeystrokes.total, mistakes, timeMs);
+    const wpm = WPMCalculator.calculateNetWPM(instKeystrokes.total, mistakes, timeMs, instKeystrokes.correct);
     const rawWpm = WPMCalculator.calculateRawWPM(instKeystrokes.total, timeMs);
     const acc = WPMCalculator.calculateAccuracy(instKeystrokes.correct, instKeystrokes.total);
 

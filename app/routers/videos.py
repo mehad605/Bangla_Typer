@@ -47,9 +47,9 @@ def _get_videos_uncached():
             if sid not in parts_by_session:
                 parts_by_session[sid] = {}
             mins = p["total_time_ms"] / 60000.0
-            # Net WPM = ((Total Keystrokes / 5) - Word-Level Mistakes) / Time in Minutes
-            # Word-Level Mistakes: count of words with any error (prevents multi-penalty for Juktakkhor)
-            wpm = int((p["total_keys"] / 5.0 - p["mistakes"]) / mins) if mins > 0 else 0
+            # Net WPM = (Total Correct Keystrokes / 5) / Time in Minutes
+            # Using correct keystrokes only prevents gaming the system with fast random typing.
+            wpm = int(((p["correct_keys"] / 5.0) - p["mistakes"]) / mins) if mins > 0 else 0
             wpm = max(0, wpm)
             acc = (
                 int(p["correct_keys"] / p["total_keys"] * 100)
@@ -260,7 +260,7 @@ def _get_videos_uncached():
                     )
                     c_mins = c_time / 60000.0 if c_time > 0 else 0
                     if c_mins > 0 and c_keys > 0:
-                        vid_cur_wpm = max(0, int((c_keys / 5.0 - c_mistakes) / c_mins))
+                        vid_cur_wpm = max(0, int((c_ckeys / 5.0 - c_mistakes) / c_mins))
                         vid_cur_acc = (
                             int((c_ckeys / c_keys) * 100) if c_keys > 0 else 100
                         )
@@ -283,7 +283,7 @@ def _get_videos_uncached():
                     )
                     l_mins = l_time / 60000.0 if l_time > 0 else 0
                     if l_mins > 0 and l_keys > 0:
-                        vid_last_wpm = max(0, int((l_keys / 5.0 - l_mistakes) / l_mins))
+                        vid_last_wpm = max(0, int((l_ckeys / 5.0 - l_mistakes) / l_mins))
                         vid_last_acc = (
                             int((l_ckeys / l_keys) * 100) if l_keys > 0 else 100
                         )
@@ -307,7 +307,7 @@ def _get_videos_uncached():
                     )
                     b_mins = b_time / 60000.0 if b_time > 0 else 0
                     if b_mins > 0 and b_keys > 0:
-                        vid_best_wpm = max(0, int((b_keys / 5.0 - b_mistakes) / b_mins))
+                        vid_best_wpm = max(0, int((b_ckeys / 5.0 - b_mistakes) / b_mins))
                         vid_best_acc = (
                             int((b_ckeys / b_keys) * 100) if b_keys > 0 else 100
                         )
@@ -445,7 +445,7 @@ def _get_completed_videos_uncached():
                 tot_time = sum(p["total_time_ms"] for p in parts)
                 tot_mins = tot_time / 60000.0
                 if tot_mins > 0 and tot_keys > 0:
-                    wpm = max(0, int((tot_keys / 5.0 - tot_mistakes) / tot_mins))
+                    wpm = max(0, int((tot_ckeys / 5.0 - tot_mistakes) / tot_mins))
                     acc = int((tot_ckeys / tot_keys) * 100)
                     session_wpms.append(wpm)
                     session_accs.append(acc)
@@ -619,8 +619,8 @@ def update_stats(vid: str, part_idx: int, req: StatRequest):
         # Insert history (legacy table, optionally kept for records)
         # Use minimum 100ms threshold to avoid divide-by-zero while keeping formula consistent.
         mins = max(req.time_ms / 60000.0, 100 / 60000.0) if req.time_ms > 0 else 0
-        # Net WPM = ((Total Keystrokes / 5) - Word-Level Mistakes) / Time in Minutes
-        wpm = int((req.total_keys / 5.0 - req.mistakes) / mins) if mins > 0 else 0
+        # Net WPM = (Total Correct Keystrokes / 5) / Time in Minutes
+        wpm = int((req.correct_keys / 5.0 - req.mistakes) / mins) if mins > 0 else 0
         wpm = max(0, wpm)
         acc = (
             int((req.correct_keys / req.total_keys) * 100)
@@ -675,8 +675,8 @@ def update_stats(vid: str, part_idx: int, req: StatRequest):
             tot_mistakes = sum(p["mistakes"] for p in parts)
 
             tot_mins = tot_time / 60000.0 if tot_time > 0 else 1.0
-            # Session Overall Net WPM = ((Total Keys / 5) - Total Mistakes) / Total Minutes
-            overall_wpm = int((tot_keys / 5.0 - tot_mistakes) / tot_mins)
+            # Session Overall Net WPM = ((Total Correct Keys / 5) - Total Mistakes) / Total Minutes
+            overall_wpm = int((tot_ckeys / 5.0 - tot_mistakes) / tot_mins)
             overall_wpm = max(0, overall_wpm)
             overall_acc = int((tot_ckeys / tot_keys) * 100) if tot_keys > 0 else 100
 
@@ -707,7 +707,7 @@ def update_stats(vid: str, part_idx: int, req: StatRequest):
                         else 1.0
                     )
                     p_wpm = max(
-                        0, int((sp["total_keys"] / 5.0 - sp["mistakes"]) / p_mins)
+                        0, int((sp["correct_keys"] / 5.0 - sp["mistakes"]) / p_mins)
                     )
                     p_acc = (
                         int((sp["correct_keys"] / sp["total_keys"]) * 100)

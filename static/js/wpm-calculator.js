@@ -5,15 +5,13 @@
  * All WPM calculations in the application should use these functions to ensure
  * consistency across real-time displays, interval tracking, and final results.
  * 
- * Formula Reference (Industry Standard + Bangladesh Computer Council):
+ * Formula Reference (Industry Standard - Anti-Gaming):
  * - Gross WPM = (Total Keystrokes / 5) / Time in Minutes
- * - Net WPM = Gross WPM - (Mistakes / Time in Minutes)
- * - Simplified: Net WPM = ((Total Keystrokes / 5) - Mistakes) / Time in Minutes
+ * - Net WPM = (Correct Keystrokes / 5) / Time in Minutes
  * 
  * Key Principles:
  * - 5 keystrokes = 1 "word" (industry standard)
- * - Mistakes = Word-level errors (not character-level)
- * - Handles Bangla Juktakkhor complexity (compound characters may take 2-3 keystrokes)
+ * - Net WPM uses only Correct Keystrokes to prevent system gaming via fast random typing.
  * 
  * @module WPMCalculator
  * @see INSTANT_MODE_SPRINT_PLAN.md - Task 1.2
@@ -46,52 +44,46 @@ const MIN_CONSISTENCY_DATA_POINTS = 3;
 const WPMCalculator = {
     
     /**
-     * Calculate Net WPM (Words Per Minute with mistake penalty).
+     * Calculate Net WPM (Words Per Minute based on correct typing).
      * 
-     * This is the primary metric shown to users. It represents actual typing
-     * speed accounting for errors made during the session.
+     * Formula: Net WPM = ((Correct Keystrokes / 5) - Mistakes) / Time in Minutes
      * 
-     * Formula: Net WPM = ((Total Keystrokes / 5) - Mistakes) / Time in Minutes
+     * By subtracting word-level mistakes from the correct word count, we ensure
+     * that errors are heavily penalized. This prevents "gaming" the system
+     * where rapid random typing might accidentally hit some correct keys.
      * 
-     * @param {number} totalKeystrokes - All keystrokes including wrong ones
-     * @param {number} mistakes - Word-level mistake count (not character-level)
+     * @param {number} totalKeystrokes - (Ignored in Net calculation)
+     * @param {number} mistakes - Word-level mistake count
      * @param {number} timeMs - Time elapsed in milliseconds
+     * @param {number} correctKeystrokes - Number of valid keystrokes produced
      * @returns {number} Net WPM (floored to integer, minimum 0)
      * 
      * @example
-     * // User typed 300 keystrokes with 10 mistakes in 1 minute
-     * WPMCalculator.calculateNetWPM(300, 10, 60000);
-     * // Returns: 50 WPM
-     * // Calculation: ((300/5) - 10) / 1 = 50
+     * // User typed 300 keystrokes (250 correct) with 10 word mistakes in 1 minute
+     * WPMCalculator.calculateNetWPM(300, 10, 60000, 250);
+     * // Returns: 40 WPM
+     * // Calculation: ((250 / 5) - 10) / 1 = 40
      */
-    calculateNetWPM(totalKeystrokes, mistakes, timeMs) {
+    calculateNetWPM(totalKeystrokes, mistakes, timeMs, correctKeystrokes = null) {
         if (timeMs <= 0) return 0;
         
+        // Effective correct count (fallback to total - penalty if explicit count missing)
+        const effectiveCorrect = (correctKeystrokes !== null) ? correctKeystrokes : totalKeystrokes;
         const timeMin = timeMs / 60000;
-        const grossWords = totalKeystrokes / KEYSTROKES_PER_WORD;
-        const netWords = grossWords - mistakes;
+        
+        // Net Words = (Correct Keystrokes / 5) - Mistakes
+        const netWords = (effectiveCorrect / KEYSTROKES_PER_WORD) - mistakes;
         const netWPM = netWords / timeMin;
         
         return Math.max(0, Math.floor(netWPM));
     },
     
     /**
-     * Calculate Raw WPM (Gross WPM without mistake penalty).
-     * 
-     * This metric shows typing speed without accounting for errors.
-     * Useful for understanding raw typing capability.
-     * 
-     * Formula: Raw WPM = (Total Keystrokes / 5) / Time in Minutes
+     * Calculate Raw WPM (Gross WPM - total throughput including errors).
      * 
      * @param {number} totalKeystrokes - All keystrokes (correct + wrong)
      * @param {number} timeMs - Time elapsed in milliseconds
      * @returns {number} Raw WPM (floored to integer, minimum 0)
-     * 
-     * @example
-     * // User typed 300 keystrokes in 1 minute
-     * WPMCalculator.calculateRawWPM(300, 60000);
-     * // Returns: 60 WPM
-     * // Calculation: (300/5) / 1 = 60
      */
     calculateRawWPM(totalKeystrokes, timeMs) {
         if (timeMs <= 0) return 0;
@@ -103,30 +95,10 @@ const WPMCalculator = {
     },
     
     /**
-     * Calculate interval WPM (for per-second or per-interval tracking).
-     * 
-     * Used for tracking WPM snapshots during a typing session. These snapshots
-     * are used for consistency calculation and performance graphs.
-     * 
-     * Unlike cumulative calculations, this uses only the keystrokes/mistakes
-     * within a specific time slice (usually 1 second).
-     * 
-     * @param {number} keystrokesInInterval - Keystrokes in this time slice
-     * @param {number} mistakesInInterval - Mistakes in this time slice
-     * @param {number} intervalMs - Time slice duration (typically 1000ms)
-     * @returns {Object} Object containing netWPM and rawWPM for the interval
-     * @returns {number} returns.netWPM - Net WPM for this interval
-     * @returns {number} returns.rawWPM - Raw WPM for this interval
-     * 
-     * @example
-     * // User typed 25 keystrokes with 2 mistakes in 1 second
-     * WPMCalculator.calculateIntervalWPM(25, 2, 1000);
-     * // Returns: { netWPM: 180, rawWPM: 300 }
-     * // Net calc: ((25/5) - 2) / (1/60) = 180
-     * // Raw calc: (25/5) / (1/60) = 300
+     * Calculate interval snapshot stats.
      */
-    calculateIntervalWPM(keystrokesInInterval, mistakesInInterval, intervalMs) {
-        const netWPM = this.calculateNetWPM(keystrokesInInterval, mistakesInInterval, intervalMs);
+    calculateIntervalWPM(keystrokesInInterval, mistakesInInterval, intervalMs, correctInInterval = null) {
+        const netWPM = this.calculateNetWPM(keystrokesInInterval, mistakesInInterval, intervalMs, correctInInterval);
         const rawWPM = this.calculateRawWPM(keystrokesInInterval, intervalMs);
         
         return { netWPM, rawWPM };

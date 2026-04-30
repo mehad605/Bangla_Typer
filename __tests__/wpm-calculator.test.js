@@ -51,9 +51,17 @@ describe('WPMCalculator', () => {
             expect(result).toBe(41);
         });
         
-        test('negative time returns zero', () => {
-            const result = WPMCalculator.calculateNetWPM(100, 5, -1000);
+        test('prevents gaming: high speed but extremely low accuracy', () => {
+            // Scenario from user: 247 keystrokes, 13 correct, ~40 mistakes in 4.5s
+            const timeMs = 4500;
+            const result = WPMCalculator.calculateNetWPM(247, 40, timeMs, 13);
             expect(result).toBe(0);
+        });
+
+        test('realistic correct count usage', () => {
+            // 300 total, 250 correct, 5 mistakes in 1 min
+            const result = WPMCalculator.calculateNetWPM(300, 5, 60000, 250);
+            expect(result).toBe(45); // (250/5) - 5 = 45
         });
     });
     
