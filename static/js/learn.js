@@ -1,3 +1,15 @@
+const CHAR_DISPLAY_NAMES = {
+    // Kars
+    'া': 'আ-কার (া)', 'ি': 'ই-কার (ি)', 'ী': 'ঈ-কার (ী)',
+    'ু': 'উ-কার (ু)', 'ূ': 'ঊ-কার (ূ)', 'ৃ': 'ঋ-কার (ৃ)',
+    'ে': 'এ-কার (ে)', 'ৈ': 'ঐ-কার (ৈ)', 'ৗ': 'ঔ-কার (ৗ)',
+    // Phalas
+    '্য': 'য-ফলা (্য)', '্র': 'র-ফলা (্র)', '্ল': 'ল-ফলা (্ল)',
+    '্ব': 'ব-ফলা (্ব)', '্ম': 'ম-ফলা (্ম)', '্ন': 'ন-ফলা (্ন)',
+    // Others
+    '।': 'দাঁড়ি (।)', 'ং': 'অনুস্বার (ং)', 'ঃ': 'বিসর্গ (ঃ)', 'ৎ': 'খণ্ড-ত (ৎ)'
+};
+
 const LEARN_DATA = {
     letters: {
         title: "অক্ষর",
@@ -9,9 +21,9 @@ const LEARN_DATA = {
             { id: 'l4', num: 4, chars: ['উ', 'ঊ', 'দ', 'ধ'] },
             { id: 'l5', num: 5, chars: ['ঋ', 'ৎ', 'ঃ'] },
             { id: 'l6', num: 6, chars: ['উ', 'ঊ', 'ঋ', 'দ', 'ধ', 'ৎ', 'ঃ'] },
-            { id: 'l7', num: 7, chars: ['ব', 'ভ', '্', '।'] },
-            { id: 'l8', num: 8, chars: ['উ', 'ঊ', 'ঋ', 'ব', 'ভ', '্', '।'] },
-            { id: 'l9', num: 9, chars: ['অ', 'আ', 'ই', 'ঈ', 'উ', 'ঊ', 'ঋ', 'ক', 'খ', 'ত', 'থ', 'দ', 'ধ', 'ব', 'ভ', '্', '।', 'ৎ', 'ঃ'] },
+            { id: 'l7', num: 7, chars: ['ব', 'ভ', '।'] },
+            { id: 'l8', num: 8, chars: ['উ', 'ঊ', 'ঋ', 'ব', 'ভ', '।'] },
+            { id: 'l9', num: 9, chars: ['অ', 'আ', 'ই', 'ঈ', 'উ', 'ঊ', 'ঋ', 'ক', 'খ', 'ত', 'থ', 'দ', 'ধ', 'ব', 'ভ', '।', 'ৎ', 'ঃ'] },
             // Stage 2
             { id: 'l10', num: 10, chars: ['প', 'ফ', 'ট', 'ঠ', 'চ', 'ছ', 'জ', 'ঝ'] },
             { id: 'l11', num: 11, chars: ['ড', 'ঢ', 'হ', 'ঞ', 'গ', 'ঘ'] },
@@ -42,11 +54,12 @@ const LEARN_DATA = {
             { id: 'k7', num: 7, chars: ['া', 'ি', 'ী', 'ু', 'ূ', 'ৃ', 'ে', 'ৈ', 'ৗ'] }
         ]
     },
-    modifiers: {
-        title: "যুক্তবর্ণ",
+    fola: {
+        title: "ফলা",
         lessons: [
-            { id: 'm1', num: 1, chars: ['্'] },
-            { id: 'm2', num: 2, chars: ['্র'] }
+            { id: 'f1', num: 1, chars: ['্য', '্র', '্ল'] },
+            { id: 'f2', num: 2, chars: ['্ব', '্ম', '্ন'] },
+            { id: 'f3', num: 3, chars: ['্য', '্র', '্ল', '্ব', '্ম', '্ন'] }
         ]
     }
 };
@@ -198,8 +211,8 @@ function renderLearnMain() {
                     <div style="text-align: center; padding: 10px; font-size: 0.95rem; color: var(--text); font-family: 'JetBrains Mono', monospace; font-weight: 600; border-bottom: 2px solid var(--border); background: rgba(0,0,0,0.1);">
                         Lesson ${toBn(lesson.num)}
                     </div>
-                    <div style="text-align: center; padding: 10px 10px 14px; font-size: 1.3rem; color: var(--accent); line-height: 1.8; min-height: 44px; word-break: break-word;">
-                        ${lesson.chars.join(' ')}
+                    <div style="text-align: center; padding: 10px 10px 14px; font-size: ${lesson.chars.length > 4 ? '0.85rem' : '1rem'}; color: var(--accent); line-height: 1.4; min-height: 44px; max-height: 140px; overflow-y: auto; word-break: break-word; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        ${lesson.chars.map(c => `<span>${CHAR_DISPLAY_NAMES[c] || c}</span>`).join('')}
                     </div>
                 </div>
             `;
@@ -235,7 +248,9 @@ function renderLessonDetail() {
             
             <div style="background: var(--surface); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                 <div style="color: var(--subtext); margin-bottom: 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Characters in this lesson</div>
-                <div style="font-size: 1.8rem; color: var(--accent); letter-spacing: 8px; font-weight: 500;">${currentLearnLesson.chars.join(' ')}</div>
+                <div style="font-size: 1.5rem; color: var(--accent); display: flex; flex-direction: column; align-items: center; gap: 0.6rem; font-weight: 500; max-height: 250px; overflow-y: auto;">
+                    ${currentLearnLesson.chars.map(c => `<span>${CHAR_DISPLAY_NAMES[c] || c}</span>`).join('')}
+                </div>
             </div>
 
             <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">
