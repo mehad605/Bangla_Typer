@@ -6,31 +6,26 @@ from pathlib import Path
 
 def get_app_dirs():
     """
-    Get application directories that work both in development and frozen (exe) mode.
-
-    Returns:
-        tuple: (base_dir, data_dir, scripts_dir)
+    Get application directories following platform-specific standards.
+    Windows: AppData/Local/bangla-typer
+    macOS: ~/Library/Application Support/bangla-typer
+    Linux: ~/.config/bangla-typer and ~/.local/share/bangla-typer
     """
-    if getattr(sys, "frozen", False):
-        # Path to the directory containing the executable
-        app_dir = Path(sys.executable).parent.resolve()
-    else:
-        # Path to the project root in development
-        app_dir = Path(__file__).parent.parent.resolve()
+    app_name = "bangla-typer"
+    
+    # 1. Determine Base Directory (for config.json)
+    if sys.platform == "win32":
+        base_dir = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / app_name
+    elif sys.platform == "darwin":
+        base_dir = Path.home() / "Library" / "Application Support" / app_name
+    else:  # Linux/Other
+        base_dir = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / app_name
 
-    # Determine where the config file should live.
-    # If app_dir is writable (Portable Mode), use it.
-    # Otherwise (Installed Mode), use user's home directory.
-    if os.access(app_dir, os.W_OK):
-        base_dir = app_dir
-    else:
-        # For Linux/Windows installed apps, use a standard hidden config folder
-        base_dir = Path.home() / ".bangla-typer"
-        base_dir.mkdir(parents=True, exist_ok=True)
+    base_dir.mkdir(parents=True, exist_ok=True)
 
+    # 2. Check for custom data directory in config
     config_file = base_dir / "config.json"
     custom_data_dir = None
-
     if config_file.exists():
         try:
             with open(config_file, "r") as f:
@@ -40,25 +35,24 @@ def get_app_dirs():
         except Exception:
             pass
 
-    # For frozen mode (exe/binary)
-    if getattr(sys, "frozen", False):
-        # If no custom data dir set, use a folder in base_dir
-        if custom_data_dir:
-            data_dir = custom_data_dir
-        else:
-            if os.access(app_dir, os.W_OK):
-                data_dir = base_dir / "Bangla_Data"
-            else:
-                # If installed in /opt, put the data in a visible place in Home
-                data_dir = Path.home() / "Bangla_Typer_Data"
+    # 3. Determine Default Data Directory (if no custom one set)
+    if custom_data_dir:
+        data_dir = custom_data_dir
+    else:
+        if sys.platform == "win32":
+            data_dir = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / app_name / "Data"
+        elif sys.platform == "darwin":
+            data_dir = Path.home() / "Library" / "Application Support" / app_name / "Data"
+        else:  # Linux/Other
+            data_dir = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / app_name
 
-        # Scripts directory: Use bundled scripts by default
-        # For PyInstaller, bundled files are in sys._MEIPASS
+    # 4. Scripts Directory
+    if getattr(sys, "frozen", False):
+        app_dir = Path(sys.executable).parent.resolve()
         bundled_scripts = Path(getattr(sys, "_MEIPASS", app_dir)) / "scripts"
         scripts_dir = bundled_scripts
     else:
-        # In development
-        data_dir = custom_data_dir or (app_dir / "Bangla Data")
+        app_dir = Path(__file__).parent.parent.resolve()
         scripts_dir = app_dir / "scripts"
 
     return base_dir, data_dir, scripts_dir

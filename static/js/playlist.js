@@ -461,14 +461,14 @@ async function createNewPlaylist() {
         if (result.status === 'ok') {
             closeModal('modal-new-playlist');
             if (videoIds.length > 0) exitSelectionMode();
-            showYTToast(`✅ "${name}" প্লেলিস্ট তৈরি হয়েছে!`);
+            showToast(`✅ "${name}" প্লেলিস্ট তৈরি হয়েছে!`);
             await loadPlaylists();
         } else {
-            showYTToast(`❌ ভুল হয়েছে: ${result.error || 'Unknown error'}`);
+            showToast(`❌ ভুল হয়েছে: ${result.error || 'Unknown error'}`);
         }
     } catch (err) {
         console.error("Failed to create playlist:", err);
-        showYTToast(`❌ সার্ভারে যান্ত্রিক সমস্যা হয়েছে।`);
+        showToast(`❌ সার্ভারে যান্ত্রিক সমস্যা হয়েছে।`);
     }
 }
 window.createNewPlaylist = createNewPlaylist;
@@ -479,7 +479,7 @@ async function addToExistingPlaylist(pid) {
     await apiAddVideos(pid, videoIds);
     exitSelectionMode();
     const pl = allPlaylists.find(p => p.playlist_id === pid);
-    showYTToast(`✅ ${videoIds.length} টি ভিডিও "${pl ? pl.name : 'প্লেলিস্ট'}" এ যোগ হয়েছে!`);
+    showToast(`✅ ${videoIds.length} টি ভিডিও "${pl ? pl.name : 'প্লেলিস্ট'}" এ যোগ হয়েছে!`);
     await loadPlaylists();
 }
 
@@ -489,13 +489,13 @@ async function removeVideoFromCurrentPlaylist(vid) {
     const updated = await fetchPlaylist(currentPlaylistId);
     document.getElementById('pl-detail-name').textContent = updated.name;
     renderPlaylistDetailCards(updated);
-    showYTToast('✅ ভিডিও প্লেলিস্ট থেকে সরানো হয়েছে।');
+    showToast('✅ ভিডিও প্লেলিস্ট থেকে সরানো হয়েছে।');
     loadPlaylists();
 }
 
 async function deletePlaylist(pid) {
     await apiDeletePlaylist(pid);
-    showYTToast('🗑 প্লেলিস্ট মুছে ফেলা হয়েছে।');
+    showToast('🗑 প্লেলিস্ট মুছে ফেলা হয়েছে।');
     await loadPlaylists();
 }
 
@@ -504,7 +504,7 @@ async function deleteCurrentPlaylist() {
     const pl = allPlaylists.find(p => p.playlist_id === currentPlaylistId);
     await apiDeletePlaylist(currentPlaylistId);
     currentPlaylistId = null;
-    showYTToast(`🗑 "${pl ? pl.name : 'প্লেলিস্ট'}" মুছে ফেলা হয়েছে।`);
+    showToast(`🗑 "${pl ? pl.name : 'প্লেলিস্ট'}" মুছে ফেলা হয়েছে।`);
     showPlaylistScreen();
 }
 
@@ -596,30 +596,18 @@ async function confirmEditPlaylist() {
                 document.getElementById('pl-detail-name').textContent = name;
                 document.getElementById('pl-detail-title').textContent = '🎵 ' + name;
             }
-            showYTToast(`✅ প্লেলিস্ট আপডেট হয়েছে: "${name}"`);
+            showToast(`✅ প্লেলিস্ট আপডেট হয়েছে: "${name}"`);
             await loadPlaylists();
         } else {
-            showYTToast(`❌ আপডেট ব্যর্থ হয়েছে: ${data.error || 'Unknown error'}`);
+            showToast(`❌ আপডেট ব্যর্থ হয়েছে: ${data.error || 'Unknown error'}`);
         }
     } catch (e) {
         console.error('Error updating playlist:', e);
-        showYTToast(`❌ সার্ভারে যান্ত্রিক সমস্যা হয়েছে।`);
+        showToast(`❌ সার্ভারে যান্ত্রিক সমস্যা হয়েছে।`);
     }
 }
 
 
-// ──────────────────────────────────────
-// Toast helper (reuse existing if present)
-// ──────────────────────────────────────
-function showYTToast(msg) {
-    const container = document.getElementById('yt-toast-container');
-    if (!container) return;
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = msg;
-    container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
-}
 
 // ──────────────────────────────────────
 // Utility

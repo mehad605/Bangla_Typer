@@ -797,11 +797,11 @@ window.saveManualVideo = async function() {
             await fetchLibrary();
         } else {
             const data = await res.json();
-            alert('Error: ' + (data.error || 'Failed to save content'));
+            showToast('Error: ' + (data.error || 'Failed to save content'));
         }
     } catch (e) {
         console.error('Error saving manual video:', e);
-        alert('Error saving content');
+        showToast('Error saving content');
     } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = originalText;
@@ -2299,12 +2299,13 @@ async function openSettingsModal() {
 }
 
 function closeSettingsModal() {
-    document.getElementById('modal-settings').classList.remove('open');
+    const modal = document.getElementById('modal-settings');
+    if (modal) modal.classList.remove('open');
 }
 
 async function changeDataDirectory() {
     if (!window.nativeBridge || !window.nativeBridge.select_folder) {
-        alert('This feature is only available in the standalone application.');
+        showToast('This feature is only available in the standalone application.');
         return;
     }
 
@@ -2318,16 +2319,24 @@ async function changeDataDirectory() {
             });
 
             if (res.ok) {
-                document.getElementById('settings-data-dir-path').textContent = newPath;
-                // Refresh data dynamically
-                await fetchLibrary(true);
-                alert('Data directory updated successfully!');
+                // 1. Update Path Label
+                const pathLabel = document.getElementById('settings-data-dir-path');
+                if (pathLabel) pathLabel.textContent = newPath;
+                
+                // 2. Close Modal
+                closeSettingsModal();
+                
+                // 3. Show Success Toast
+                showToast('✅ Data directory updated successfully!');
+                
+                // 4. Refresh Library (Non-blocking)
+                fetchLibrary(true).catch(err => console.error("Library refresh failed:", err));
             } else {
-                alert('Failed to update data directory.');
+                showToast('❌ Failed to update data directory.');
             }
         } catch (e) {
-            console.error(e);
-            alert('Error updating data directory.');
+            console.error("Directory change error:", e);
+            showToast('❌ Error updating data directory.');
         }
     }
 }
@@ -2406,6 +2415,24 @@ function updateAddBtnState() {
         btn.style.opacity = '1';
         btn.style.pointerEvents = 'auto';
     }
+}
+
+window.showToast = function(msg) {
+    const container = document.getElementById('yt-toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `
+        <div class="toast-header">
+            <div class="toast-title">${msg}</div>
+            <div class="toast-close" onclick="this.parentElement.parentElement.remove()">✕</div>
+        </div>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 500);
+    }, 3500);
 }
 
 function createProcessingToast(url) {

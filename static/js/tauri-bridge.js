@@ -35,7 +35,9 @@
                     title: 'Select Data Directory'
                 });
             } else {
-                alert('Folder selection is not available in browser mode.');
+                if (window.showToast) {
+                    window.showToast('Folder selection is not available in browser mode.');
+                }
                 return Promise.resolve(null);
             }
         },

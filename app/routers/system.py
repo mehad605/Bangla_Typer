@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Body
 import sqlite3
 import os
 import sys
@@ -11,7 +11,40 @@ from app import paths
 from app.services.word_processor import sync_all_files
 
 router = APIRouter()
-...
+
+
+@router.post("/api/heartbeat")
+async def heartbeat_post():
+    from app.services.heartbeat import update_heartbeat
+    update_heartbeat()
+    return {"status": "ok"}
+
+
+@router.get("/api/data_dir")
+async def get_data_dir():
+    return {"path": str(paths.DATA_DIR)}
+
+
+@router.post("/api/data_dir")
+async def set_data_dir(payload: dict = Body(...)):
+    new_path = payload.get("path")
+    if not new_path:
+        raise HTTPException(status_code=400, detail="Path is required")
+
+    # Update path config
+    paths.update_data_dir(new_path)
+
+    # Reset database connection pool to use new DB location
+    from app.database import reset_db_pool
+    reset_db_pool()
+
+    # Clear video caches
+    from app.routers.videos import clear_video_caches
+    clear_video_caches()
+
+    return {"status": "ok", "path": str(paths.DATA_DIR)}
+
+
 @router.get("/learn/sync-words")
 async def sync_user_words():
     def event_generator():
@@ -81,7 +114,9 @@ if getattr(sys, "frozen", False):
 else:
     STATIC_DB = 'learn_static.db'  # Development root
 
-USER_DB = 'Bangla Data/typer_data.db' # Dynamic user database
+def get_user_db_path():
+    return str(paths.DATA_DIR / "typer_data.db")
+
 
 def get_connection(db_path):
     conn = sqlite3.connect(db_path)
@@ -109,7 +144,8 @@ async def get_learn_words(
     
     def fetch_pool(cur_min, cur_max):
         pool = []
-        for db_path in [STATIC_DB, USER_DB]:
+        user_db = get_user_db_path()
+        for db_path in [STATIC_DB, user_db]:
             if not os.path.exists(db_path): continue
             
             try:
@@ -127,7 +163,7 @@ async def get_learn_words(
                 # Fetch words within length range
                 table_name = 'dictionary' if db_path == STATIC_DB else 'learn_dictionary'
                 
-                if db_path == USER_DB:
+                if db_path == user_db:
                     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='learn_dictionary'")
                     if not cursor.fetchone(): 
                         conn.close()
