@@ -57,7 +57,7 @@ function toBn(num) {
 //  GLOBAL APP SWITCHING
 // =====================================================================
 let activeYTScreen = 'library'; // Keeps track of last open screen in YT Mode
-let currentMode = 'instant'; // Default mode
+let currentMode = 'learn'; // Default mode
 
 function switchMode(mode) {
     if (window.saveLearnScroll) window.saveLearnScroll();
@@ -4414,7 +4414,5 @@ if (ytSearchInput) {
     ytSearchInput.addEventListener('input', handleYTSearch);
 }
 
-// Instant Init (Fallback will run immediately, fetchLibrary will re-trigger with real data)
-loadNewText();
-// Start in Instant mode
-switchMode('instant');
+// Start in Learn mode
+switchMode('learn');
