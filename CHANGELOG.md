@@ -1,6 +1,24 @@
-# Changelog - Instant Mode Sprint
+# Changelog
 
-All notable changes to Instant Mode during the sprint are documented here.
+All notable changes to Bangla Typer are documented here.
+
+## [1.1.0] - 2026-05-01
+
+### Added
+- **Multi-Platform CI/CD**: Added GitHub Actions support for Windows (MSI/EXE), Linux (DEB/RPM/AppImage/Tarball), and macOS (DMG - Intel & ARM).
+- **Standardized App Data Pathing**: Switched to platform-standard directories for configuration and data (AppData on Windows, XDG standards on Linux, Application Support on macOS).
+- **High-Quality Icon Assets**: Regenerated all application icons from SVG source for crystal-clear display on high-DPI screens and taskbars.
+- **Themed UI Notifications**: Replaced native browser alerts with a custom-themed Toast system matching the app's aesthetic.
+- **Manual AppImage Build**: Added a robust manual AppImage build process to ensure compatibility across modern Linux distributions.
+
+### Fixed
+- **Settings UX**: Improved the directory change process with auto-updating paths and automatic modal closure.
+- **System Routes**: Restored missing backend endpoints for data directory management and server heartbeats.
+- **Learn Mode Data**: Ensured the static learning database is correctly bundled and accessible in production builds.
+
+### Changed
+- **Project Structure**: Sanitized repository for public release, removing all personal identifiers and local build artifacts.
+- **Documentation**: Updated README with modern installation and development instructions.
 
 ## [1.0.0] - 2026-04-06
 

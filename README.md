@@ -62,7 +62,8 @@ Traditional typing tutors often treat Bangla like English, ignoring its phonetic
 
 ### 📦 Option 1: For Users
 1. Download the latest release from the [Releases Page](https://github.com/mehad605/Bangla_Typer/releases/latest).
-2. **Debian/Ubuntu**: Install using the `.deb` package.
+2. **Recommendation**: It is highly recommended to have **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** installed on your system for the best experience with the YouTube integration feature.
+3. **Debian/Ubuntu**: Install using the `.deb` package.
 3. **Fedora/RHEL**: Install using the `.rpm` package.
 4. **Universal Linux**: Run the `.AppImage` directly.
 5. **Windows**: Run the provided installer `.exe`.
@@ -123,11 +124,12 @@ Releases are handled via GitHub Actions.
 
 ## ⚙️ Configuration & Data
 
-The application stores settings and progress in a `config.json` file.
-- **Location**: Created on first run.
-  - **Portable Mode**: Same directory as the app.
-  - **Installed Mode**: `~/.bangla-typer/config.json`.
-- **Data Directory**: You can store your lessons and results anywhere by modifying `data_dir` in the settings or config file.
+The application follows platform-standard conventions for storing settings and progress.
+- **Settings (`config.json`)**:
+  - **Windows**: `%LOCALAPPDATA%\bangla-typer\config.json`
+  - **Linux**: `~/.config/bangla-typer/config.json`
+  - **macOS**: `~/Library/Application Support/bangla-typer/config.json`
+- **Data Directory**: By default, your lessons and database are stored in the same base directory as the config, but you can change this to any folder (e.g., a cloud-synced directory) via the in-app Settings.
 
 ---
 
