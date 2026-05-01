@@ -9,11 +9,13 @@ import json
 from pathlib import Path
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse, StreamingResponse
-import yt_dlp
 from app.database import get_db
 from app import paths
 from app.utils import safe_name
 from app.services.youtube import *
+
+# Import hybrid yt-dlp helper
+from scripts.yt_dlp_helper import YoutubeDL
 
 # Import script logic directly
 import scripts.download_captions as dl_script
@@ -72,7 +74,7 @@ def process_url(url: str):
                     }
                 },
             }
-            with yt_dlp.YoutubeDL(ydl_info_opts) as ydl:
+            with YoutubeDL(ydl_info_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
 
             title = info.get("title", "Unknown Title")

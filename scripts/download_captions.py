@@ -31,38 +31,30 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
-import yt_dlp
+try:
+    from .yt_dlp_helper import YoutubeDL
+except (ImportError, ValueError):
+    try:
+        from yt_dlp_helper import YoutubeDL
+    except ImportError:
+        from scripts.yt_dlp_helper import YoutubeDL
 
 BASE_DIR     = Path.cwd()
 DATA_DIR     = BASE_DIR / "Bangla Data"
 TEMP_DIR     = DATA_DIR / "temp"
-COOKIES_FILE = Path(__file__).resolve().parent / "cookies.txt"
 
 SUBTITLE_LANGS = ("bn", "bn-BD", "bn-Beng", "en", "en-US")
-
-_BOT_PHRASES = (
-    "sign in to confirm",
-    "not a bot",
-    "cookies",
-    "authentication",
-)
 
 _RELOAD_PHRASES = (
     "needs to be reloaded",
     "page needs to be reloaded",
 )
 
-def _needs_cookies(msg: str) -> bool:
-    low = msg.lower()
-    return any(p in low for p in _BOT_PHRASES)
-
 def _needs_reload(msg: str) -> bool:
     low = msg.lower()
     return any(p in low for p in _RELOAD_PHRASES)
 
-def _ydl_opts(base: dict, use_cookies: bool) -> dict:
-    if use_cookies and COOKIES_FILE.exists():
-        return {**base, "cookiefile": str(COOKIES_FILE)}
+def _ydl_opts(base: dict) -> dict:
     return base
 
 
@@ -143,21 +135,16 @@ def inject_metadata(vtt_path: Path, title: str, channel: str, url: str) -> None:
 
 def _ydl_run(action_label: str, base_opts: dict, target: str, is_download: bool) -> dict | None:
     """
-    Run a yt-dlp operation with up to 3 attempts:
-      1. No cookies
-      2. Bot-check detected  -> retry with cookies
-      3. Reload error        -> wait 3s and retry with cookies once more
-
+    Run a yt-dlp operation with up to 3 attempts for reload errors.
     Returns info dict for extract_info, or True/None for downloads.
     Raises on unrecoverable error.
     """
     last_err = ""
-    use_cookies = False
 
     for attempt in range(1, 4):
-        opts = _ydl_opts(base_opts, use_cookies)
+        opts = _ydl_opts(base_opts)
         try:
-            with yt_dlp.YoutubeDL(opts) as ydl:
+            with YoutubeDL(opts) as ydl:
                 if is_download:
                     ydl.download([target])
                     return True
@@ -166,19 +153,9 @@ def _ydl_run(action_label: str, base_opts: dict, target: str, is_download: bool)
         except Exception as e:
             last_err = str(e)
 
-            if _needs_cookies(last_err) and not use_cookies:
-                if not COOKIES_FILE.exists():
-                    raise RuntimeError(
-                        f"Bot check triggered but cookies.txt not found at: {COOKIES_FILE}"
-                    )
-                print(f"  [RETRY] Bot check on {action_label} - retrying with cookies...")
-                use_cookies = True
-                continue
-
             if _needs_reload(last_err) and attempt < 3:
                 print(f"  [RETRY] Reload error on {action_label} - waiting 3s and retrying...")
                 time.sleep(3)
-                # keep use_cookies as-is (already True from previous step if we got here)
                 continue
 
             raise RuntimeError(last_err)
@@ -204,7 +181,15 @@ def download_video(url: str) -> bool:
     try:
         info = _ydl_run(
             "metadata",
-            {"quiet": True, "no_warnings": True},
+            {
+                "quiet": True, 
+                "no_warnings": True,
+                "extractor_args": {
+                    "youtube": {
+                        "player_client": ["android", "web"],
+                    }
+                },
+            },
             url,
             is_download=False,
         )
@@ -249,6 +234,11 @@ def download_video(url: str) -> bool:
                     "writethumbnail": True,
                     "skip_download": True,
                     "outtmpl": str(thumb_tmp),
+                    "extractor_args": {
+                        "youtube": {
+                            "player_client": ["android", "web"],
+                        }
+                    },
                 },
                 url,
                 is_download=True,
@@ -280,6 +270,11 @@ def download_video(url: str) -> bool:
                     "subtitlesformat": "vtt",
                     "skip_download": True,
                     "outtmpl": str(subs_tmp),
+                    "extractor_args": {
+                        "youtube": {
+                            "player_client": ["android", "web"],
+                        }
+                    },
                 },
                 url,
                 is_download=True,
@@ -342,11 +337,6 @@ def main() -> int:
         sys.exit(0)
 
     print(f"\nLoaded {len(urls)} URL(s) from: {source}")
-
-    if COOKIES_FILE.exists():
-        print(f"  cookies.txt found - will use as fallback if needed")
-    else:
-        print(f"  No cookies.txt - running without cookies")
 
     print("\nScanning existing files to skip duplicates...")
     TEMP_DIR.mkdir(parents=True, exist_ok=True)
