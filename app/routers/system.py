@@ -17,10 +17,11 @@ def get_connection(db_path):
 
 @router.get("/learn/words")
 async def get_learn_words(
-    section: str, # 'letters', 'kar', or 'fola'
+    section: str, # 'letters', 'kar', 'fola', or 'juktakkhor'
     allowed_chars: str, # e.g. "অআকখ"
     allowed_kars: Optional[str] = "", # e.g. "াি"
     allowed_folas: Optional[str] = "", # e.g. "্য"
+    allowed_juktakkhor: Optional[str] = "", # e.g. "ক্ক" (comma separated or raw string)
     min_len: int = 2,
     max_len: int = 10,
     limit: int = 20
@@ -30,6 +31,7 @@ async def get_learn_words(
     1. Letters Mode: ONLY allowed_chars, no markings.
     2. Kar Mode: allowed_chars + allowed_kars, no folas/jukta.
     3. Fola Mode: allowed_chars + allowed_kars + allowed_folas.
+    4. Juktakkhor Mode: letters + kars + folas + target juktakkhor.
     """
     
     def fetch_pool(cur_min, cur_max):
@@ -43,8 +45,8 @@ async def get_learn_words(
                 
                 # Section-aware juktakkhor filtering:
                 # Letters and Kar sections MUST have NO juktakkhor.
-                # Fola section MUST have at least one fola (which IS a juktakkhor).
-                if section == 'fola':
+                # Fola and Juktakkhor sections MUST have juktakkhor.
+                if section in ['fola', 'juktakkhor']:
                     jukta_clause = "AND has_juktakkhor = 1"
                 else:
                     jukta_clause = "AND has_juktakkhor = 0"
@@ -71,12 +73,27 @@ async def get_learn_words(
                 allowed_kars_set = set(allowed_kars) if allowed_kars else set()
                 allowed_folas_set = set(allowed_folas) if allowed_folas else set()
                 
+                # Parse juktakkhor into a list if it's comma separated or just raw
+                # Note: Juktakkhor are complex sequences like 'ক্ক'
+                target_jukta_list = []
+                if allowed_juktakkhor:
+                    if ',' in allowed_juktakkhor:
+                        target_jukta_list = [j.strip() for j in allowed_juktakkhor.split(',')]
+                    else:
+                        # If not comma separated, we might have multiple jukta in one string
+                        # This is tricky since they are variable length. 
+                        # But for single lessons, it's usually one juktakkhor.
+                        target_jukta_list = [allowed_juktakkhor]
+
                 # For subset check, we ignore Hasantas (handled by conjunct check)
                 all_allowed_base = allowed_chars_set | allowed_kars_set | allowed_folas_set
+                # Also add base letters from target juktakkhor to all_allowed_base
+                for jukta in target_jukta_list:
+                    all_allowed_base.update(set(jukta))
+                
                 if '্' in all_allowed_base: all_allowed_base.remove('্')
                 
-                # Identify allowed fola sequences (e.g., '্য', '্র', 'র্')
-                # These are extracted from the allowed_folas string which contains the fola signs.
+                # Identify allowed fola sequences
                 legal_fola_seqs = []
                 fstr = allowed_folas if allowed_folas else ""
                 k = 0
@@ -90,40 +107,68 @@ async def get_learn_words(
                 for row in rows:
                     word = row['word']
                     
-                    # Check 1: Base Character Set (excluding conjunct structure)
-                    # Every char in word (except hasanta) must be in our allowed set.
+                    # Check 1: Base Character Set
                     word_base_chars = {c for c in word if c != '্'}
                     if not word_base_chars.issubset(all_allowed_base):
                         continue
                     
-                    # Check 2: Conjunct Integrity (For Fola section)
+                    # Check 2: Conjunct Integrity
                     has_mandatory = False
                     has_illegal_jukta = False
                     
-                    if section == 'fola':
-                        # Every hasanta MUST be part of an allowed fola sequence.
-                        # No other conjuncts or folas allowed.
+                    if section in ['fola', 'juktakkhor']:
+                        # We need to find every conjunct in the word and see if it's allowed
+                        # A conjunct is char + hasanta + char (or multiple)
+                        # We'll use a sliding window/regex or simple walk
                         j = 0
                         while j < len(word):
                             if word[j] == '্':
-                                found_allowed = False
-                                # Try to match an allowed sequence at this position
-                                for seq in legal_fola_seqs:
-                                    if seq[0] == '্': # Standard Fola (্ + char)
-                                        if j < len(word)-1 and word[j+1] == seq[1]:
-                                            found_allowed = True; has_mandatory = True; break
-                                    else: # Reph (char + ্)
-                                        if j > 0 and word[j-1] == seq[0]:
-                                            found_allowed = True; has_mandatory = True; break
+                                # This is a joiner. Check if the structure it belongs to is allowed.
+                                is_valid_structure = False
                                 
-                                if not found_allowed:
+                                # Check against target juktakkhor
+                                for jukta in target_jukta_list:
+                                    if jukta in word:
+                                        # Note: This is a bit loose but effective for single-jukta lessons
+                                        # To be precise, we check if this SPECIFIC hasanta is part of it
+                                        h_idx = jukta.find('্')
+                                        if h_idx != -1:
+                                            # If jukta is 'ক্ক' (ক+্+ক)
+                                            # and word has 'ক্ক' at index 'start'
+                                            # then word[start+1] is the hasanta.
+                                            start_search = 0
+                                            while True:
+                                                found_at = word.find(jukta, start_search)
+                                                if found_at == -1: break
+                                                if found_at + h_idx == j:
+                                                    is_valid_structure = True
+                                                    has_mandatory = True
+                                                    break
+                                                start_search = found_at + 1
+                                        if is_valid_structure: break
+                                
+                                if not is_valid_structure:
+                                    # Check against legal fola sequences
+                                    for seq in legal_fola_seqs:
+                                        if seq[0] == '্': 
+                                            if j < len(word)-1 and word[j+1] == seq[1]:
+                                                is_valid_structure = True
+                                                if section == 'fola': has_mandatory = True
+                                                break
+                                        else: 
+                                            if j > 0 and word[j-1] == seq[0]:
+                                                is_valid_structure = True
+                                                if section == 'fola': has_mandatory = True
+                                                break
+                                
+                                if not is_valid_structure:
                                     has_illegal_jukta = True; break
                             j += 1
                         
                         if has_illegal_jukta or not has_mandatory:
                             continue
                     
-                    # Check 3: Mandatory Inclusion for non-fola sections
+                    # Check 3: Mandatory Inclusion for non-complex sections
                     if section == 'letters':
                         if not (set(word) & allowed_chars_set): continue
                     elif section == 'kar':

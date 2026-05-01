@@ -61,6 +61,195 @@ const LEARN_DATA = {
             { id: 'f2', num: 2, chars: ['্ব', '্ম', '্ন'] },
             { id: 'f3', num: 3, chars: ['্য', '্র', '্ল', '্ব', '্ম', '্ন'] }
         ]
+    },
+    juktakkhor: {
+        title: "যুক্তাক্ষর",
+        lessons: [
+            { id: 'j1', num: 1, chars: ['ক্ক'] },
+            { id: 'j2', num: 2, chars: ['ক্ট'] },
+            { id: 'j3', num: 3, chars: ['ক্ত'] },
+            { id: 'j4', num: 4, chars: ['ক্ক', 'ক্ট', 'ক্ত'] },
+            { id: 'j5', num: 5, chars: ['ক্র'] },
+            { id: 'j6', num: 6, chars: ['ক্ল'] },
+            { id: 'j7', num: 7, chars: ['ক্ষ'] },
+            { id: 'j8', num: 8, chars: ['ক্র', 'ক্ল', 'ক্ষ'] },
+            { id: 'j9', num: 9, chars: ['ক্স'] },
+            { id: 'j10', num: 10, chars: ['ক্ষ্ণ'] },
+            { id: 'j11', num: 11, chars: ['ক্ষ্ম'] },
+            { id: 'j12', num: 12, chars: ['ক্স', 'ক্ষ্ণ', 'ক্ষ্ম'] },
+            { id: 'j13', num: 13, chars: ['খ্র'] },
+            { id: 'j14', num: 14, chars: ['গ্গ'] },
+            { id: 'j15', num: 15, chars: ['গ্ধ'] },
+            { id: 'j16', num: 16, chars: ['খ্র', 'গ্গ', 'গ্ধ'] },
+            { id: 'j17', num: 17, chars: ['গ্ন'] },
+            { id: 'j18', num: 18, chars: ['গ্য'] },
+            { id: 'j19', num: 19, chars: ['গ্র'] },
+            { id: 'j20', num: 20, chars: ['গ্ন', 'গ্য', 'গ্র'] },
+            { id: 'j21', num: 21, chars: ['গ্ল'] },
+            { id: 'j22', num: 22, chars: ['ঘ্ন'] },
+            { id: 'j23', num: 23, chars: ['ঘ্র'] },
+            { id: 'j24', num: 24, chars: ['গ্ল', 'ঘ্ন', 'ঘ্র'] },
+            { id: 'j25', num: 25, chars: ['ঙ্ক'] },
+            { id: 'j26', num: 26, chars: ['ঙ্খ'] },
+            { id: 'j27', num: 27, chars: ['ঙ্গ'] },
+            { id: 'j28', num: 28, chars: ['ঙ্ক', 'ঙ্খ', 'ঙ্গ'] },
+            { id: 'j29', num: 29, chars: ['ঙ্ঘ'] },
+            { id: 'j30', num: 30, chars: ['চ্চ'] },
+            { id: 'j31', num: 31, chars: ['চ্ছ'] },
+            { id: 'j32', num: 32, chars: ['ঙ্ঘ', 'চ্চ', 'চ্ছ'] },
+            { id: 'j33', num: 33, chars: ['চ্য'] },
+            { id: 'j34', num: 34, chars: ['জ্জ'] },
+            { id: 'j35', num: 35, chars: ['জ্ঝ'] },
+            { id: 'j36', num: 36, chars: ['চ্য', 'জ্জ', 'জ্ঝ'] },
+            { id: 'j37', num: 37, chars: ['জ্ঞ'] },
+            { id: 'j38', num: 38, chars: ['জ্য'] },
+            { id: 'j39', num: 39, chars: ['জ্র'] },
+            { id: 'j40', num: 40, chars: ['জ্ঞ', 'জ্য', 'জ্র'] },
+            { id: 'j41', num: 41, chars: ['জ্ব'] },
+            { id: 'j42', num: 42, chars: ['ঞ্চ'] },
+            { id: 'j43', num: 43, chars: ['ঞ্ছ'] },
+            { id: 'j44', num: 44, chars: ['জ্ব', 'ঞ্চ', 'ঞ্ছ'] },
+            { id: 'j45', num: 45, chars: ['ঞ্জ'] },
+            { id: 'j46', num: 46, chars: ['ঞ্ঝ'] },
+            { id: 'j47', num: 47, chars: ['ট্ট'] },
+            { id: 'j48', num: 48, chars: ['ঞ্জ', 'ঞ্ঝ', 'ট্ট'] },
+            { id: 'j49', num: 49, chars: ['ট্য'] },
+            { id: 'j50', num: 50, chars: ['ট্র'] },
+            { id: 'j51', num: 51, chars: ['ড্ড'] },
+            { id: 'j52', num: 52, chars: ['ট্য', 'ট্র', 'ড্ড'] },
+            { id: 'j53', num: 53, chars: ['ড্র'] },
+            { id: 'j54', num: 54, chars: ['ণ্ট'] },
+            { id: 'j55', num: 55, chars: ['ণ্ঠ'] },
+            { id: 'j56', num: 56, chars: ['ড্র', 'ণ্ট', 'ণ্ঠ'] },
+            { id: 'j57', num: 57, chars: ['ণ্ড'] },
+            { id: 'j58', num: 58, chars: ['ণ্য'] },
+            { id: 'j59', num: 59, chars: ['ত্ত'] },
+            { id: 'j60', num: 60, chars: ['ণ্ড', 'ণ্য', 'ত্ত'] },
+            { id: 'j61', num: 61, chars: ['ত্থ'] },
+            { id: 'j62', num: 62, chars: ['ত্ন'] },
+            { id: 'j63', num: 63, chars: ['ত্য'] },
+            { id: 'j64', num: 64, chars: ['ত্থ', 'ত্ন', 'ত্য'] },
+            { id: 'j65', num: 65, chars: ['ত্র'] },
+            { id: 'j66', num: 66, chars: ['ত্ব'] },
+            { id: 'j67', num: 67, chars: ['ট্ম'] },
+            { id: 'j68', num: 68, chars: ['ত্র', 'ত্ব', 'ট্ম'] },
+            { id: 'j69', num: 69, chars: ['ঠ্য'] },
+            { id: 'j70', num: 70, chars: ['ড্য'] },
+            { id: 'j71', num: 71, chars: ['ণ্ণ'] },
+            { id: 'j72', num: 72, chars: ['ঠ্য', 'ড্য', 'ণ্ণ'] },
+            { id: 'j73', num: 73, chars: ['ৎস'] },
+            { id: 'j74', num: 74, chars: ['থ্য'] },
+            { id: 'j75', num: 75, chars: ['দ্গ'] },
+            { id: 'j76', num: 76, chars: ['ৎস', 'থ্য', 'দ্গ'] },
+            { id: 'j77', num: 77, chars: ['দ্দ'] },
+            { id: 'j78', num: 78, chars: ['দ্ধ'] },
+            { id: 'j79', num: 79, chars: ['দ্ব'] },
+            { id: 'j80', num: 80, chars: ['দ্দ', 'দ্ধ', 'দ্ব'] },
+            { id: 'j81', num: 81, chars: ['দ্য'] },
+            { id: 'j82', num: 82, chars: ['দ্র'] },
+            { id: 'j83', num: 83, chars: ['ধ্ন'] },
+            { id: 'j84', num: 84, chars: ['দ্য', 'দ্র', 'ধ্ন'] },
+            { id: 'j85', num: 85, chars: ['ধ্য'] },
+            { id: 'j86', num: 86, chars: ['ধ্র'] },
+            { id: 'j87', num: 87, chars: ['ধ্ব'] },
+            { id: 'j88', num: 88, chars: ['ধ্য', 'ধ্র', 'ধ্ব'] },
+            { id: 'j89', num: 89, chars: ['ন্ট'] },
+            { id: 'j90', num: 90, chars: ['ন্ঠ'] },
+            { id: 'j91', num: 91, chars: ['ন্ড'] },
+            { id: 'j92', num: 92, chars: ['ন্ট', 'ন্ঠ', 'ন্ড'] },
+            { id: 'j93', num: 93, chars: ['ন্ত'] },
+            { id: 'j94', num: 94, chars: ['ন্থ'] },
+            { id: 'j95', num: 95, chars: ['ন্দ'] },
+            { id: 'j96', num: 96, chars: ['ন্ত', 'ন্থ', 'ন্দ'] },
+            { id: 'j97', num: 97, chars: ['ন্ধ'] },
+            { id: 'j98', num: 98, chars: ['ন্ন'] },
+            { id: 'j99', num: 99, chars: ['ন্য'] },
+            { id: 'j100', num: 100, chars: ['ন্ধ', 'ন্ন', 'ন্য'] },
+            { id: 'j101', num: 101, chars: ['ন্ব'] },
+            { id: 'j102', num: 102, chars: ['প্ট'] },
+            { id: 'j103', num: 103, chars: ['প্ত'] },
+            { id: 'j104', num: 104, chars: ['ন্ব', 'প্ট', 'প্ত'] },
+            { id: 'j105', num: 105, chars: ['প্ন'] },
+            { id: 'j106', num: 106, chars: ['প্য'] },
+            { id: 'j107', num: 107, chars: ['প্র'] },
+            { id: 'j108', num: 108, chars: ['প্ন', 'প্য', 'প্র'] },
+            { id: 'j109', num: 109, chars: ['প্ল'] },
+            { id: 'j110', num: 110, chars: ['প্স'] },
+            { id: 'j111', num: 111, chars: ['ফ্ট'] },
+            { id: 'j112', num: 112, chars: ['প্ল', 'প্স', 'ফ্ট'] },
+            { id: 'j113', num: 113, chars: ['ফ্র'] },
+            { id: 'j114', num: 114, chars: ['ব্জ'] },
+            { id: 'j115', num: 115, chars: ['ব্দ'] },
+            { id: 'j116', num: 116, chars: ['ফ্র', 'ব্জ', 'ব্দ'] },
+            { id: 'j117', num: 117, chars: ['ব্ধ'] },
+            { id: 'j118', num: 118, chars: ['ম্ব'] },
+            { id: 'j119', num: 119, chars: ['ম্ভ'] },
+            { id: 'j120', num: 120, chars: ['ব্ধ', 'ম্ব', 'ম্ভ'] },
+            { id: 'j121', num: 121, chars: ['ম্ম'] },
+            { id: 'j122', num: 122, chars: ['ম্ল'] },
+            { id: 'j123', num: 123, chars: ['য্য'] },
+            { id: 'j124', num: 124, chars: ['ম্ম', 'ম্ল', 'য্য'] },
+            { id: 'j125', num: 125, chars: ['র্ক'] },
+            { id: 'j126', num: 126, chars: ['র্গ'] },
+            { id: 'j127', num: 127, chars: ['র্ঘ'] },
+            { id: 'j128', num: 128, chars: ['র্ক', 'র্গ', 'র্ঘ'] },
+            { id: 'j129', num: 129, chars: ['র্চ'] },
+            { id: 'j130', num: 130, chars: ['র্জ'] },
+            { id: 'j131', num: 131, chars: ['র্ত'] },
+            { id: 'j132', num: 132, chars: ['র্চ', 'র্জ', 'র্ত'] },
+            { id: 'j133', num: 133, chars: ['র্দ'] },
+            { id: 'j134', num: 134, chars: ['র্ধ'] },
+            { id: 'j135', num: 135, chars: ['র্ণ'] },
+            { id: 'j136', num: 136, chars: ['র্দ', 'র্ধ', 'র্ণ'] },
+            { id: 'j137', num: 137, chars: ['র্প'] },
+            { id: 'j138', num: 138, chars: ['র্ব'] },
+            { id: 'j139', num: 139, chars: ['র্ম'] },
+            { id: 'j140', num: 140, chars: ['র্প', 'র্ব', 'র্ম'] },
+            { id: 'j141', num: 141, chars: ['র্য'] },
+            { id: 'j142', num: 142, chars: ['র্ল'] },
+            { id: 'j143', num: 143, chars: ['র্শ'] },
+            { id: 'j144', num: 144, chars: ['র্য', 'র্ল', 'র্শ'] },
+            { id: 'j145', num: 145, chars: ['র্ষ'] },
+            { id: 'j146', num: 146, chars: ['র্স'] },
+            { id: 'j147', num: 147, chars: ['ল্ক'] },
+            { id: 'j148', num: 148, chars: ['র্ষ', 'র্স', 'ল্ক'] },
+            { id: 'j149', num: 149, chars: ['ল্গ'] },
+            { id: 'j150', num: 150, chars: ['ল্ট'] },
+            { id: 'j151', num: 151, chars: ['ল্ড'] },
+            { id: 'j152', num: 152, chars: ['ল্গ', 'ল্ট', 'ল্ড'] },
+            { id: 'j153', num: 153, chars: ['ল্প'] },
+            { id: 'j154', num: 154, chars: ['ল্ফ'] },
+            { id: 'j155', num: 155, chars: ['ল্ব'] },
+            { id: 'j156', num: 156, chars: ['ল্প', 'ল্ফ', 'ল্ব'] },
+            { id: 'j157', num: 157, chars: ['ল্ম'] },
+            { id: 'j158', num: 158, chars: ['ল্ল'] },
+            { id: 'j159', num: 159, chars: ['শ্ন'] },
+            { id: 'j160', num: 160, chars: ['ল্ম', 'ল্ল', 'শ্ন'] },
+            { id: 'j161', num: 161, chars: ['শ্ল'] },
+            { id: 'j162', num: 162, chars: ['শ্ব'] },
+            { id: 'j163', num: 163, chars: ['শ্য'] },
+            { id: 'j164', num: 164, chars: ['শ্ল', 'শ্ব', 'শ্য'] },
+            { id: 'j165', num: 165, chars: ['শ্র'] },
+            { id: 'j166', num: 166, chars: ['ষ্ক'] },
+            { id: 'j167', num: 167, chars: ['ষ্ট'] },
+            { id: 'j168', num: 168, chars: ['শ্র', 'ষ্ক', 'ষ্ট'] },
+            { id: 'j169', num: 169, chars: ['ষ্ঠ'] },
+            { id: 'j170', num: 170, chars: ['ষ্ণ'] },
+            { id: 'j171', num: 171, chars: ['ষ্প'] },
+            { id: 'j172', num: 172, chars: ['ষ্ঠ', 'ষ্ণ', 'ষ্প'] },
+            { id: 'j173', num: 173, chars: ['ষ্ফ'] },
+            { id: 'j174', num: 174, chars: ['ষ্ম'] },
+            { id: 'j175', num: 175, chars: ['ষ্য'] },
+            { id: 'j176', num: 176, chars: ['ষ্ফ', 'ষ্ম', 'ষ্য'] },
+            { id: 'j177', num: 177, chars: ['স্ক'] },
+            { id: 'j178', num: 178, chars: ['স্ট'] },
+            { id: 'j179', num: 179, chars: ['স্ত'] },
+            { id: 'j180', num: 180, chars: ['স্ক', 'স্ট', 'স্ত'] },
+            { id: 'j181', num: 181, chars: ['স্থ'] },
+            { id: 'j182', num: 182, chars: ['স্ন'] },
+            { id: 'j183', num: 183, chars: ['স্প'] },
+            { id: 'j184', num: 184, chars: ['স্থ', 'স্ন', 'স্প'] }
+        ]
     }
 };
 
@@ -356,6 +545,7 @@ window.startLearnTyping = async function(difficultyId) {
     let allowedChars = "";
     let allowedKars = "";
     let allowedFolas = "";
+    let allowedJuktakkhor = "";
 
     const letterLessons = LEARN_DATA.letters.lessons;
     const karLessons = LEARN_DATA.kar.lessons;
@@ -372,6 +562,12 @@ window.startLearnTyping = async function(difficultyId) {
         allowedChars = letterLessons.map(l => l.chars.join('')).join('');
         allowedKars = karLessons.map(l => l.chars.join('')).join('');
         allowedFolas = currentLearnLesson.chars.join('');
+    } else if (sectionKey === 'juktakkhor') {
+        // All Letters + All Kars + All Folas + current lesson Juktakkhor
+        allowedChars = letterLessons.map(l => l.chars.join('')).join('');
+        allowedKars = karLessons.map(l => l.chars.join('')).join('');
+        allowedFolas = folaLessons.map(l => l.chars.join('')).join('');
+        allowedJuktakkhor = currentLearnLesson.chars.join(',');
     }
 
     const avgWordLen = (currentDifficulty.minWordLen + currentDifficulty.maxWordLen) / 2;
@@ -383,6 +579,7 @@ window.startLearnTyping = async function(difficultyId) {
         allowedChars, 
         allowedKars, 
         allowedFolas,
+        allowedJuktakkhor,
         wordLimit,
         currentDifficulty.minWordLen,
         currentDifficulty.maxWordLen
@@ -532,6 +729,7 @@ async function newLearnContent() {
     let allowedChars = "";
     let allowedKars = "";
     let allowedFolas = "";
+    let allowedJuktakkhor = "";
 
     const letterLessons = LEARN_DATA.letters.lessons;
     const karLessons = LEARN_DATA.kar.lessons;
@@ -546,6 +744,11 @@ async function newLearnContent() {
         allowedChars = letterLessons.map(l => l.chars.join('')).join('');
         allowedKars = karLessons.map(l => l.chars.join('')).join('');
         allowedFolas = currentLearnLesson.chars.join('');
+    } else if (sectionKey === 'juktakkhor') {
+        allowedChars = letterLessons.map(l => l.chars.join('')).join('');
+        allowedKars = karLessons.map(l => l.chars.join('')).join('');
+        allowedFolas = folaLessons.map(l => l.chars.join('')).join('');
+        allowedJuktakkhor = currentLearnLesson.chars.join(',');
     }
 
     const avgWordLen = (currentDifficulty.minWordLen + currentDifficulty.maxWordLen) / 2;
@@ -556,6 +759,7 @@ async function newLearnContent() {
         allowedChars, 
         allowedKars, 
         allowedFolas,
+        allowedJuktakkhor,
         wordLimit,
         currentDifficulty.minWordLen,
         currentDifficulty.maxWordLen

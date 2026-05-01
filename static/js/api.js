@@ -122,9 +122,9 @@ class ApiService {
         return new EventSource(`${this.baseUrl}/process?url=${encodeURIComponent(url)}`);
     }
 
-    async getLearnWords(section, allowed_chars, allowed_kars = '', allowed_folas = '', limit = 25, min_len = 2, max_len = 10) {
+    async getLearnWords(section, allowed_chars, allowed_kars = '', allowed_folas = '', allowed_juktakkhor = '', limit = 25, min_len = 2, max_len = 10) {
         try {
-            const url = `/learn/words?section=${encodeURIComponent(section)}&allowed_chars=${encodeURIComponent(allowed_chars)}&allowed_kars=${encodeURIComponent(allowed_kars)}&allowed_folas=${encodeURIComponent(allowed_folas)}&limit=${limit}&min_len=${min_len}&max_len=${max_len}`;
+            const url = `/learn/words?section=${encodeURIComponent(section)}&allowed_chars=${encodeURIComponent(allowed_chars)}&allowed_kars=${encodeURIComponent(allowed_kars)}&allowed_folas=${encodeURIComponent(allowed_folas)}&allowed_juktakkhor=${encodeURIComponent(allowed_juktakkhor)}&limit=${limit}&min_len=${min_len}&max_len=${max_len}`;
             const res = await fetch(url);
             if (!res.ok) throw new Error('Failed to fetch learn words');
             const data = await res.json();
