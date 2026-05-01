@@ -30,13 +30,17 @@ Traditional typing tutors often treat Bangla like English, ignoring its phonetic
 
 ## 📸 Screenshots
 
-| Content Library | Playlist Chapters |
+| Learn Mode Curriculum | Learn Mode Lesson |
 |:---:|:---:|
-| <img src="Assets/Screenshots/content-library.png" width="400" alt="Content Library"> | <img src="Assets/Screenshots/playlist-chapters.png" width="400" alt="Playlist Chapters"> |
+| <img src="Assets/Screenshots/learn-mode-curriculum-1.png" width="400" alt="Learn Mode Curriculum"> | <img src="Assets/Screenshots/learn-mode-lesson-detail.png" width="400" alt="Lesson Details"> |
 
-| Instant Mode Typing | YouTube Mode Typing |
+| Instant Mode Typing | YouTube Mode Collection |
 |:---:|:---:|
-| <img src="Assets/Screenshots/typing-area-instant.png" width="400" alt="Instant Mode"> | <img src="Assets/Screenshots/typing-area-youtube.png" width="400" alt="YouTube Mode"> |
+| <img src="Assets/Screenshots/instant-mode-typing.png" width="400" alt="Instant Mode"> | <img src="Assets/Screenshots/youtube-mode-collection.png" width="400" alt="YouTube Mode"> |
+
+| Advanced Curriculum | |
+|:---:|:---:|
+| <img src="Assets/Screenshots/learn-mode-curriculum-2.png" width="400" alt="Advanced Curriculum"> | |
 
 ---
 
@@ -71,21 +75,30 @@ Traditional typing tutors often treat Bangla like English, ignoring its phonetic
 ### 🛠️ Option 2: Run from Source
 If you are a developer or want to experiment with the latest code:
 
-```bash
-# Clone the repository
-git clone https://github.com/mehad605/Bangla_Typer.git
-cd Bangla_Typer
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/mehad605/Bangla_Typer.git
+   cd Bangla_Typer
+   ```
 
-# Install dependencies
-uv sync
-npm install
+2. **Install dependencies & Prepare Sidecar**:
+   ```bash
+   uv sync
+   npm install
+   uv run build.py  # Builds the required sidecar binary
+   ```
 
-# Run desktop app (Tauri + FastAPI sidecar)
-npm run dev
+3. **Start the Application**:
+   You need to run both the backend and the frontend. Open two terminals:
 
-# Backend only (optional)
-uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
+   *   **Terminal 1 (Backend)**:
+       ```bash
+       uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+       ```
+   *   **Terminal 2 (Frontend/Tauri)**:
+       ```bash
+       npm run dev
+       ```
 
 ---
 
@@ -144,7 +157,7 @@ The application follows platform-standard conventions for storing settings and p
 ## 💡 Troubleshooting
 - **rpmbuild not found**: Non-critical. RPM creation will be skipped on systems without `rpm`.
 - **appimagetool not found**: The build script attempts to auto-download this if missing.
-- **Sidecar start issues**: Run `uv sync` and retry `npm run dev` so Python dependencies are available.
+- **Sidecar start issues**: Run `uv sync` and `uv run build.py` then retry `npm run dev` so the sidecar binary is correctly generated and available.
 
 ---
 
