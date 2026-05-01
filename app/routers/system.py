@@ -1,13 +1,86 @@
 from fastapi import APIRouter, HTTPException, Query
 import sqlite3
 import os
+import sys
 import random
+import json
+from pathlib import Path
 from typing import Optional
+from fastapi.responses import StreamingResponse
+from app import paths
+from app.services.word_processor import sync_all_files
 
 router = APIRouter()
+...
+@router.get("/learn/sync-words")
+async def sync_user_words():
+    def event_generator():
+        def send_event(data):
+            return f"data: {json.dumps(data)}\n\n"
+
+        try:
+            yield send_event({"status": "starting", "message": "স্ক্যান করা হচ্ছে..."})
+            
+            def progress(current, total):
+                # This is tricky since it's a synchronous callback in an async generator.
+                # But for a local server, it's usually fine.
+                pass 
+
+            # We'll use a slightly different approach for streaming progress
+            from app.services.word_processor import get_db
+            import os
+            
+            data_dir = Path(paths.DATA_DIR)
+            all_files = list(data_dir.rglob("*.txt"))
+            files_to_process = []
+            
+            with get_db() as conn:
+                cursor = conn.cursor()
+                for f in all_files:
+                    if "temp" in str(f): continue
+                    mtime = os.path.getmtime(f)
+                    cursor.execute("SELECT last_modified FROM processed_words_files WHERE file_path = ?", (str(f),))
+                    row = cursor.fetchone()
+                    if not row or row[0] < mtime:
+                        files_to_process.append(f)
+
+            if not files_to_process:
+                yield send_event({"status": "done", "message": "ইতিমধ্যে আপডেট করা আছে", "new_words": 0, "processed": 0})
+                return
+
+            total = len(files_to_process)
+            new_words_total = 0
+            
+            from app.services.word_processor import process_text_file
+            for i, f in enumerate(files_to_process):
+                yield send_event({
+                    "status": "processing", 
+                    "current": i + 1, 
+                    "total": total, 
+                    "file": f.name
+                })
+                new_words = process_text_file(f)
+                new_words_total += new_words
+
+            yield send_event({
+                "status": "done", 
+                "message": f"সফলভাবে {new_words_total} টি নতুন শব্দ যুক্ত করা হয়েছে", 
+                "new_words": new_words_total, 
+                "processed": total
+            })
+
+        except Exception as e:
+            yield send_event({"status": "error", "message": str(e)})
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 # Two-tier database architecture
-STATIC_DB = 'learn_static.db'  # Shipped with app
+if getattr(sys, "frozen", False):
+    # PyInstaller bundles files in sys._MEIPASS
+    STATIC_DB = os.path.join(sys._MEIPASS, 'learn_static.db')
+else:
+    STATIC_DB = 'learn_static.db'  # Development root
+
 USER_DB = 'Bangla Data/typer_data.db' # Dynamic user database
 
 def get_connection(db_path):

@@ -2,7 +2,12 @@
         /* ══════════════════════════════════════
     THEMES - Base CSS Variables
     ══════════════════════════════════════ */
-        :root {
+        @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+:root {
             /* Base colors (Tokyo Night as default) */
             --bg: #1a1b26;
             --surface: #24283b;

@@ -251,7 +251,35 @@ def init_db():
             )
         """)
 
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS learn_dictionary (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                word TEXT NOT NULL UNIQUE,
+                chars TEXT NOT NULL,
+                kars TEXT NOT NULL,
+                folas TEXT NOT NULL,
+                has_juktakkhor BOOLEAN NOT NULL,
+                length INTEGER NOT NULL,
+                source TEXT DEFAULT 'user'
+            )
+        """)
+
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS processed_words_files (
+                file_path TEXT PRIMARY KEY,
+                last_modified REAL,
+                word_count INTEGER
+            )
+        """)
+
         # Performance indexes for frequent filters/sorts.
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_learn_len ON learn_dictionary(length)"
+        )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_learn_jukta ON learn_dictionary(has_juktakkhor)"
+        )
+
         c.execute(
             "CREATE INDEX IF NOT EXISTS idx_video_sessions_video_status_started "
             "ON video_sessions(video_id, status, started_at DESC)"

@@ -102,6 +102,11 @@ def build_sidecar(target_triple: str, app_name: str) -> None:
             separator = ";" if sys.platform == "win32" else ":"
             data_args.extend(["--add-data", f"{d}{separator}{d}"])
 
+    # Include learn_static.db file if it exists
+    if (PROJECT_ROOT / "learn_static.db").exists():
+        separator = ";" if sys.platform == "win32" else ":"
+        data_args.extend(["--add-data", f"learn_static.db{separator}."])
+
     # Clean up previous pyinstaller artifacts to prevent stale builds
     for d in ["build", "dist"]:
         path = PROJECT_ROOT / d

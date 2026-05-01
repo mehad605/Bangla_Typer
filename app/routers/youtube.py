@@ -20,6 +20,7 @@ from scripts.yt_dlp_helper import YoutubeDL
 # Import script logic directly
 import scripts.download_captions as dl_script
 import scripts.process_captions as proc_script
+from app.services.word_processor import process_text_file
 
 ACTIVE_TASKS = set()
 TASKS_LOCK = threading.Lock()
@@ -175,6 +176,12 @@ def process_url(url: str):
                         break
 
             if os.path.exists(txt_file):
+                # Task: Update user dictionary with new words
+                try:
+                    process_text_file(Path(txt_file))
+                except Exception as e:
+                    print(f"[WordProcessor] Error: {e}")
+
                 yield send_event(
                     {
                         "step": 4,

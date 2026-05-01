@@ -60,6 +60,7 @@ let activeYTScreen = 'library'; // Keeps track of last open screen in YT Mode
 let currentMode = 'instant'; // Default mode
 
 function switchMode(mode) {
+    if (window.saveLearnScroll) window.saveLearnScroll();
     currentMode = mode;
     const tabInstant = document.getElementById('tab-instant');
     const tabYoutube = document.getElementById('tab-youtube');

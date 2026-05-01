@@ -281,10 +281,12 @@ let learnTypingState = {
 };
 let learnCurrentView = 'main';
 let learnChartInstance = null;
+let lastLearnScrollPos = 0;
 
 function saveLearnProgress() {
     try {
         localStorage.setItem('bangla_typer_learn_progress', JSON.stringify(learnProgress));
+        localStorage.setItem('bangla_typer_learn_scroll', lastLearnScrollPos.toString());
     } catch (e) {
         console.error('Failed to save learn progress:', e);
     }
@@ -295,6 +297,10 @@ function loadLearnProgress() {
         const saved = localStorage.getItem('bangla_typer_learn_progress');
         if (saved) {
             learnProgress = JSON.parse(saved);
+        }
+        const savedScroll = localStorage.getItem('bangla_typer_learn_scroll');
+        if (savedScroll) {
+            lastLearnScrollPos = parseFloat(savedScroll);
         }
     } catch (e) {
         console.error('Failed to load learn progress:', e);
@@ -335,10 +341,41 @@ window.restoreLearnView = function() {
     }
 };
 
+window.saveLearnScroll = function() {
+    const screen = document.getElementById('learn-main-screen');
+    if (screen) {
+        lastLearnScrollPos = screen.scrollTop;
+        saveLearnProgress();
+    }
+};
+
 function renderLearnMain() {
+    // Capture current scroll position before overwriting
+    const oldScreen = document.getElementById('learn-main-screen');
+    if (oldScreen) {
+        lastLearnScrollPos = oldScreen.scrollTop;
+    }
+
     learnCurrentView = 'main';
     const container = document.getElementById('app-learn');
-    let html = `<div class="learn-screen active" id="learn-main-screen" style="flex:1; overflow-y:auto; padding: 2rem;">`;
+    let html = `
+    <div class="learn-screen active" id="learn-main-screen" style="flex:1; overflow-y:auto; padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1 style="margin: 0; font-size: 2.2rem; color: var(--text);">🎓 শিখুন (Learn)</h1>
+            
+            <div id="sync-container" style="position: relative; display: flex; flex-direction: column; align-items: flex-end;">
+                <button class="res-btn" id="btn-sync-words" onclick="window.syncUserWords()" 
+                        title="আপনার সংগ্রহে থাকা সব ভিডিও থেকে নতুন বাংলা শব্দ ডাটাবেসে যুক্ত করুন"
+                        style="background: var(--surface); border: 1px solid var(--border); color: var(--subtext); padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
+                    <span id="sync-icon">🔄</span> <span id="sync-text">শব্দ আপডেট করুন</span>
+                </button>
+                <div id="sync-progress-container" style="display: none; width: 200px; height: 4px; background: var(--surface2); border-radius: 2px; margin-top: 8px; overflow: hidden;">
+                    <div id="sync-progress-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.1s;"></div>
+                </div>
+                <div id="sync-status" style="font-size: 0.7rem; color: var(--subtext); margin-top: 4px; height: 12px; font-family: 'JetBrains Mono', monospace;"></div>
+            </div>
+        </div>
+`;
 
     // Add Legend
     html += `
@@ -412,9 +449,24 @@ function renderLearnMain() {
 
     html += `</div>`;
     container.innerHTML = html;
+
+    // Restore scroll position
+    if (lastLearnScrollPos > 0) {
+        requestAnimationFrame(() => {
+            const screen = document.getElementById('learn-main-screen');
+            if (screen) screen.scrollTop = lastLearnScrollPos;
+        });
+    }
 }
 
 window.openLearnLesson = function(sectionKey, lessonId) {
+    // Save scroll position before leaving main view
+    const screen = document.getElementById('learn-main-screen');
+    if (screen) {
+        lastLearnScrollPos = screen.scrollTop;
+        saveLearnProgress();
+    }
+
     const section = LEARN_DATA[sectionKey];
     currentLearnLesson = section.lessons.find(l => l.id === lessonId);
     if (!currentLearnLesson) return;
@@ -1148,3 +1200,65 @@ function resetLearnTyping() {
     updateLearnStepGuide();
     window.focusLearnInput();
 }
+
+window.syncUserWords = function() {
+    const btn = document.getElementById('btn-sync-words');
+    const icon = document.getElementById('sync-icon');
+    const text = document.getElementById('sync-text');
+    const progressContainer = document.getElementById('sync-progress-container');
+    const progressBar = document.getElementById('sync-progress-bar');
+    const status = document.getElementById('sync-status');
+    
+    if (btn.disabled) return;
+    
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+    icon.style.display = 'inline-block';
+    icon.style.animation = 'spin 1.5s linear infinite';
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+    status.textContent = 'স্ক্যান করা হচ্ছে...';
+    
+    const es = new EventSource('/learn/sync-words');
+    
+    es.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        if (data.status === 'processing') {
+            const pct = (data.current / data.total) * 100;
+            progressBar.style.width = `${pct}%`;
+            status.textContent = `${data.current}/${data.total} - ${data.file}`;
+        } else if (data.status === 'done') {
+            es.close();
+            progressBar.style.width = '100%';
+            status.textContent = data.message;
+            icon.style.animation = 'none';
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                progressContainer.style.display = 'none';
+                status.textContent = '';
+            }, 3000);
+        } else if (data.status === 'error') {
+            es.close();
+            status.textContent = 'ত্রুটি: ' + data.message;
+            status.style.color = 'var(--wrong)';
+            icon.style.animation = 'none';
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                status.style.color = 'var(--subtext)';
+            }, 5000);
+        }
+    };
+    
+    es.onerror = function() {
+        es.close();
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        icon.style.animation = 'none';
+        status.textContent = 'সার্ভার সংযোগ বিচ্ছিন্ন';
+    };
+};
