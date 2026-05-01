@@ -27,10 +27,6 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
-          - platform: macos-latest
-            target: aarch64-apple-darwin
-          - platform: macos-13
-            target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -77,6 +73,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
+          cache: "npm"
 
       - name: Install Node.js dependencies
         run: npm install
@@ -89,6 +86,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
       - name: Install Python dependencies
         run: uv sync
@@ -129,8 +128,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Ensure macOS builds use the correct architecture
-          APPLE_TARGET: ${{ matrix.target }}
         with:
           tagName: ${{ env.VERSION && format('v{0}', env.VERSION) || '' }}
           releaseName: ${{ env.VERSION && format('v{0}', env.VERSION) || '' }}
@@ -266,7 +263,7 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Tauri bundles"
-          find src-tauri/target -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" -o -name "*.app" \) 2>/dev/null || echo "(none)"
+          find src-tauri/target -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" \) 2>/dev/null || echo "(none)"
           echo "::endgroup::"
 
       - name: Upload artifacts
@@ -275,7 +272,6 @@ jobs:
           name: dist-${{ matrix.target }}
           path: |
             dist/*
-            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
             src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
@@ -288,7 +284,7 @@ jobs:
         run: |
           mkdir -p final_dist
           cp dist/* final_dist/ 2>/dev/null || true
-          find src-tauri/target -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -exec cp {} final_dist/ \;
+          find src-tauri/target -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" \) -exec cp {} final_dist/ \;
           
           cd final_dist
           if compgen -G "*" > /dev/null; then
@@ -330,7 +326,6 @@ jobs:
             -name "*.AppImage" -o \
             -name "*.msi" -o \
             -name "*.exe" -o \
-            -name "*.dmg" -o \
             -name "*.tar.gz" -o \
             -name "SHA256SUMS" \
           \) -exec cp {} release/ \;
