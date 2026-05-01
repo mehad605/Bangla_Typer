@@ -2,7 +2,7 @@ const CHAR_DISPLAY_NAMES = {
     // Kars
     'া': 'আ-কার (া)', 'ি': 'ই-কার (ি)', 'ী': 'ঈ-কার (ী)',
     'ু': 'উ-কার (ু)', 'ূ': 'ঊ-কার (ূ)', 'ৃ': 'ঋ-কার (ৃ)',
-    'ে': 'এ-কার (ে)', 'ৈ': 'ঐ-কার (ৈ)', 'ৗ': 'ঔ-কার (ৗ)',
+    'ে': 'এ-কার (ে)', 'ৈ': 'ঐ-কার (ৈ)', 'ো': 'ও-কার (ো)', 'ৌ': 'ঔ-কার (ৌ)',
     // Phalas
     '্য': 'য-ফলা (্য)', '্র': 'র-ফলা (্র)', '্ল': 'ল-ফলা (্ল)',
     '্ব': 'ব-ফলা (্ব)', '্ম': 'ম-ফলা (্ম)', '্ন': 'ন-ফলা (্ন)',
@@ -50,8 +50,8 @@ const LEARN_DATA = {
             { id: 'k3', num: 3, chars: ['ু', 'ূ'] },
             { id: 'k4', num: 4, chars: ['ৃ'] },
             { id: 'k5', num: 5, chars: ['ে', 'ৈ'] },
-            { id: 'k6', num: 6, chars: ['ৗ'] },
-            { id: 'k7', num: 7, chars: ['া', 'ি', 'ী', 'ু', 'ূ', 'ৃ', 'ে', 'ৈ', 'ৗ'] }
+            { id: 'k6', num: 6, chars: ['ো', 'ৌ'] },
+            { id: 'k7', num: 7, chars: ['া', 'ি', 'ী', 'ু', 'ূ', 'ৃ', 'ে', 'ৈ', 'ো', 'ৌ'] }
         ]
     },
     fola: {
@@ -65,10 +65,10 @@ const LEARN_DATA = {
 };
 
 const DIFFICULTIES = {
-    easy:      { id: 'easy',      name: 'Easy',      wpm: 15, length: 42  },
-    medium:    { id: 'medium',    name: 'Medium',    wpm: 25, length: 75  },
-    hard:      { id: 'hard',      name: 'Hard',      wpm: 40, length: 120 },
-    very_hard: { id: 'very_hard', name: 'Very Hard', wpm: 55, length: 200 }
+    easy:      { id: 'easy',      name: 'Easy',      wpm: 15, length: 60,  minWordLen: 2, maxWordLen: 4 },
+    medium:    { id: 'medium',    name: 'Medium',    wpm: 25, length: 120, minWordLen: 3, maxWordLen: 6 },
+    hard:      { id: 'hard',      name: 'Hard',      wpm: 40, length: 200, minWordLen: 4, maxWordLen: 8 },
+    very_hard: { id: 'very_hard', name: 'Very Hard', wpm: 55, length: 350, minWordLen: 6, maxWordLen: 12 }
 };
 
 let learnProgress = {};
@@ -310,29 +310,112 @@ function renderLessonDetail() {
 }
 
 function generateRandomLessonText(chars, length) {
+    const ALL_CONSONANTS = 'কখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎ';
     let result = '';
     let charsAdded = 0;
     while (charsAdded < length) {
-        const wordLen = Math.floor(Math.random() * 4) + 2; 
+        const wordLen = Math.floor(Math.random() * 3) + 2; 
         let word = '';
         for (let i = 0; i < wordLen; i++) {
             const rndChar = chars[Math.floor(Math.random() * chars.length)];
-            if (['া', 'ি', 'ী', 'ু', 'ূ', 'ৃ', 'ে', 'ৈ', 'ৗ', '্', '্র'].includes(rndChar) && i === 0) {
-                const baseChars = chars.filter(c => !['া', 'ি', 'ী', 'ু', 'ূ', 'ৃ', 'ে', 'ৈ', 'ৗ', '্', '্র'].includes(c));
-                if (baseChars.length > 0) word += baseChars[Math.floor(Math.random() * baseChars.length)];
-                else word += 'ক' + rndChar;
-            } else word += rndChar;
+            // If the character is a marking (Kar/Fola/Hasanta) and it's at the start or needs a base
+            if (['া', 'ি', 'ী', 'ু', 'ূ', 'ৃ', 'ে', 'ৈ', 'ো', 'ৌ', 'ৗ', '্', '্র', '্য', '্র', '্ল', '্ব', '্ম', '্ন'].includes(rndChar)) {
+                if (i === 0) {
+                    // Prepend a base consonant
+                    const lessonLetters = chars.filter(c => !['া', 'ি', 'ী', 'ু', 'ূ', 'ৃ', 'ে', 'ৈ', 'ো', 'ৌ', 'ৗ', '্', '্র', '্য', '্র', '্ল', '্ব', '্ম', '্ন'].includes(c));
+                    if (lessonLetters.length > 0) {
+                        word += lessonLetters[Math.floor(Math.random() * lessonLetters.length)];
+                    } else {
+                        // Global fallback to random consonant if no letters in current lesson (like k6)
+                        word += ALL_CONSONANTS[Math.floor(Math.random() * ALL_CONSONANTS.length)];
+                    }
+                }
+                word += rndChar;
+            } else {
+                word += rndChar;
+            }
         }
         result += word + ' ';
-        charsAdded += wordLen + 1;
+        charsAdded += word.length + 1;
     }
     return result.trim();
 }
 
-window.startLearnTyping = function(difficultyId) {
+window.startLearnTyping = async function(difficultyId) {
     learnCurrentView = 'console';
     currentDifficulty = DIFFICULTIES[difficultyId];
-    const rawText = generateRandomLessonText(currentLearnLesson.chars, currentDifficulty.length);
+    
+    const section = Object.values(LEARN_DATA).find(s => s.lessons.includes(currentLearnLesson));
+    const sectionKey = Object.keys(LEARN_DATA).find(k => LEARN_DATA[k] === section);
+    
+    // Isolated Mastery Rules:
+    // 1. Current lesson chars are always allowed.
+    // 2. All chars from previous sections are allowed.
+    // 3. Chars from previous lessons in the SAME section are NOT allowed (unless it's a review lesson).
+    
+    let allowedChars = "";
+    let allowedKars = "";
+    let allowedFolas = "";
+
+    const letterLessons = LEARN_DATA.letters.lessons;
+    const karLessons = LEARN_DATA.kar.lessons;
+    const folaLessons = LEARN_DATA.fola.lessons;
+
+    if (sectionKey === 'letters') {
+        allowedChars = currentLearnLesson.chars.join('');
+    } else if (sectionKey === 'kar') {
+        // All Letters + current lesson Kars
+        allowedChars = letterLessons.map(l => l.chars.join('')).join('');
+        allowedKars = currentLearnLesson.chars.join('');
+    } else if (sectionKey === 'fola') {
+        // All Letters + All Kars + current lesson Folas
+        allowedChars = letterLessons.map(l => l.chars.join('')).join('');
+        allowedKars = karLessons.map(l => l.chars.join('')).join('');
+        allowedFolas = currentLearnLesson.chars.join('');
+    }
+
+    const avgWordLen = (currentDifficulty.minWordLen + currentDifficulty.maxWordLen) / 2;
+    const wordLimit = Math.ceil(currentDifficulty.length / avgWordLen);
+    
+    // Fetch real words from DB
+    const dbWords = await api.getLearnWords(
+        sectionKey, 
+        allowedChars, 
+        allowedKars, 
+        allowedFolas,
+        wordLimit,
+        currentDifficulty.minWordLen,
+        currentDifficulty.maxWordLen
+    );
+
+    let rawText = "";
+    if (dbWords && dbWords.length > 0) {
+        if (sectionKey === 'letters') {
+            // Sprinkle logic: 70% real words, 30% random generation
+            const randomTarget = Math.ceil(currentDifficulty.length * 0.3);
+            const randomText = generateRandomLessonText(currentLearnLesson.chars, randomTarget);
+            const combined = [...dbWords];
+            const randomWords = randomText.split(' ').filter(w => w.length > 0);
+            
+            for (let rw of randomWords) {
+                const pos = Math.floor(Math.random() * combined.length);
+                combined.splice(pos, 0, rw);
+            }
+            rawText = combined.join(' ');
+        } else {
+            // No sprinkle for Kar/Fola as per request
+            rawText = dbWords.join(' ');
+        }
+    } else {
+        // For 'letters', we can fallback to random generation if DB is empty.
+        // For 'kar' and 'fola', we rely on the backend length-fallback to provide words.
+        if (sectionKey === 'letters') {
+            rawText = generateRandomLessonText(currentLearnLesson.chars, currentDifficulty.length);
+        } else {
+            rawText = dbWords.join(' '); // Fallback to whatever DB returned (might be empty if absolutely no words)
+        }
+    }
+    
     const result = generateSequence(rawText);
     
     learnSequence = result.seq;
@@ -402,7 +485,7 @@ function renderLearnConsole() {
                         <div style="display:flex; gap: 0.8rem; font-size: 0.9em;">
                             <span>কীস্ট্রোক: <span class="stat-val stat-total" id="learn-stat-keys-total">০</span></span>
                             <span>✓ <span class="stat-val stat-correct" id="learn-stat-keys-correct">০</span></span>
-                            <span>✗ <span class="stat-val stat-wrong" id="learn-stat-keys-wrong">০</span></span>
+                            <span>✗ <span class="stat-val stat-wrong" id="learn-stat-wrong">০</span></span>
                         </div>
                         <div style="display:flex; gap: 0.8rem; font-size: 0.95em; color: var(--accent); margin-top: 2px;">
                             <span>গতি (WPM): <span class="stat-val stat-correct" id="learn-stat-wpm">০</span></span>
@@ -439,12 +522,81 @@ function renderLearnConsole() {
     updateLearnStepGuide();
 }
 
-window.focusLearnInput = function() {
-    const input = document.getElementById('learn-hidden-input');
-    if (input) input.focus();
-};
+async function newLearnContent() {
+    if (!currentLearnLesson || !currentDifficulty) return;
+    
+    const section = Object.values(LEARN_DATA).find(s => s.lessons.includes(currentLearnLesson));
+    const sectionKey = Object.keys(LEARN_DATA).find(k => LEARN_DATA[k] === section);
+    
+    // Isolated Mastery Rules (Same as startLearnTyping)
+    let allowedChars = "";
+    let allowedKars = "";
+    let allowedFolas = "";
 
-window.handleLearnInput = function(e) {
+    const letterLessons = LEARN_DATA.letters.lessons;
+    const karLessons = LEARN_DATA.kar.lessons;
+    const folaLessons = LEARN_DATA.fola.lessons;
+
+    if (sectionKey === 'letters') {
+        allowedChars = currentLearnLesson.chars.join('');
+    } else if (sectionKey === 'kar') {
+        allowedChars = letterLessons.map(l => l.chars.join('')).join('');
+        allowedKars = currentLearnLesson.chars.join('');
+    } else if (sectionKey === 'fola') {
+        allowedChars = letterLessons.map(l => l.chars.join('')).join('');
+        allowedKars = karLessons.map(l => l.chars.join('')).join('');
+        allowedFolas = currentLearnLesson.chars.join('');
+    }
+
+    const avgWordLen = (currentDifficulty.minWordLen + currentDifficulty.maxWordLen) / 2;
+    const wordLimit = Math.ceil(currentDifficulty.length / avgWordLen);
+    
+    const dbWords = await api.getLearnWords(
+        sectionKey, 
+        allowedChars, 
+        allowedKars, 
+        allowedFolas,
+        wordLimit,
+        currentDifficulty.minWordLen,
+        currentDifficulty.maxWordLen
+    );
+
+    let rawText = "";
+    if (dbWords && dbWords.length > 0) {
+        if (sectionKey === 'letters') {
+            const randomTarget = Math.ceil(currentDifficulty.length * 0.3);
+            const randomText = generateRandomLessonText(currentLearnLesson.chars, randomTarget);
+            const combined = [...dbWords];
+            const randomWords = randomText.split(' ').filter(w => w.length > 0);
+            for (let rw of randomWords) {
+                const pos = Math.floor(Math.random() * combined.length);
+                combined.splice(pos, 0, rw);
+            }
+            rawText = combined.join(' ');
+        } else {
+            rawText = dbWords.join(' ');
+        }
+    } else {
+        if (sectionKey === 'letters') {
+            rawText = generateRandomLessonText(currentLearnLesson.chars, currentDifficulty.length);
+        } else {
+            rawText = dbWords.join(' ');
+        }
+    }
+    
+    const result = generateSequence(rawText);
+    learnNText = result.nText;
+    learnSequence = result.seq;
+    if (learnTypingInterval) clearInterval(learnTypingInterval);
+    learnTypingInterval = null;
+    resetLearnTypingState();
+    updateLearnStats();
+    updateLearnDisplay();
+    updateLearnStepGuide();
+    window.focusLearnInput();
+}
+
+function handleLearnInput(e) {
     if (["Tab", "Shift", "Control", "Alt", "CapsLock"].includes(e.key)) return;
     e.preventDefault();
 
@@ -455,10 +607,6 @@ window.handleLearnInput = function(e) {
         const bounds = getClusterBoundaries(learnSequence);
         const ci = bounds.findIndex(b => b.end === prevStep.clusterEnd || b.end === prevStep.targetEnd);
         
-        // Note: totalKeystrokes is NOT decremented on Backspace.
-        // This is industry standard: accuracy = correct / total_physical_keystrokes.
-        // But we must decrease the 'correct' or 'wrong' counter to keep total = correct + wrong + extra.
-        // Actually, let's keep it simple: total only increases, but we track correct/wrong at the end.
         if (ci >= 0 && learnTypedCorrectness[ci] !== undefined) {
             if (learnTypedCorrectness[ci] === true) learnKeystrokes.correct--;
             else if (learnTypedCorrectness[ci] === false) learnKeystrokes.wrong--;
@@ -476,19 +624,6 @@ window.handleLearnInput = function(e) {
         learnTypingState.startTime = Date.now();
         if (learnTypingInterval) clearInterval(learnTypingInterval);
         learnTypingInterval = setInterval(() => {
-            const tot = learnKeystrokes.total - learnTypingState.lastTotal;
-            const corr = learnKeystrokes.correct - learnTypingState.lastCorr;
-            const err = learnKeystrokes.wrong - learnTypingState.lastErr;
-            const mists = getCompletedMistakes(learnTypedCorrectness, getClusterBoundaries(learnSequence), learnNText);
-            const mistakesInInterval = mists - learnTypingState.lastMistakes;
-            const { netWPM } = WPMCalculator.calculateIntervalWPM(tot, mistakesInInterval, 1000, corr);
-
-            learnTypingState.wpmHistory.push(netWPM);
-            learnTypingState.errHistory.push(err);
-            learnTypingState.lastTotal = learnKeystrokes.total;
-            learnTypingState.lastCorr = learnKeystrokes.correct;
-            learnTypingState.lastErr = learnKeystrokes.wrong;
-            learnTypingState.lastMistakes = mists;
             updateLearnStats();
         }, 1000);
     }
@@ -534,7 +669,7 @@ window.handleLearnInput = function(e) {
         updateLearnDisplay();
         updateLearnStepGuide();
     }
-};
+}
 
 function updateLearnStats() {
     const done = learnTypedCorrectness.filter(v => v !== undefined).length;
@@ -593,7 +728,6 @@ function showLearnResults(wpm, acc, timeMs) {
     document.getElementById('learn-res-target-wpm').textContent = toBn(targetWpm);
     document.getElementById('learn-res-time').textContent = toBn(Math.round(timeMs / 1000)) + 's';
     
-    // Keystroke-level stats only
     const totalKeys = learnKeystrokes.total;
     const correctKeys = learnKeystrokes.correct;
     const wrongKeys = learnKeystrokes.wrong;
@@ -802,21 +936,6 @@ function applyLearnHints() {
 }
 
 function resetLearnTyping() {
-    if (learnTypingInterval) clearInterval(learnTypingInterval);
-    learnTypingInterval = null;
-    resetLearnTypingState();
-    updateLearnStats();
-    updateLearnDisplay();
-    updateLearnStepGuide();
-    window.focusLearnInput();
-}
-
-function newLearnContent() {
-    if (!currentLearnLesson || !currentDifficulty) return;
-    const rawText = generateRandomLessonText(currentLearnLesson.chars, currentDifficulty.length);
-    const result = generateSequence(rawText);
-    learnNText = result.nText;
-    learnSequence = result.seq;
     if (learnTypingInterval) clearInterval(learnTypingInterval);
     learnTypingInterval = null;
     resetLearnTypingState();

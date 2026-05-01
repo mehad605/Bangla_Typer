@@ -121,6 +121,19 @@ class ApiService {
     async processVideo(url) {
         return new EventSource(`${this.baseUrl}/process?url=${encodeURIComponent(url)}`);
     }
+
+    async getLearnWords(section, allowed_chars, allowed_kars = '', allowed_folas = '', limit = 25, min_len = 2, max_len = 10) {
+        try {
+            const url = `/learn/words?section=${encodeURIComponent(section)}&allowed_chars=${encodeURIComponent(allowed_chars)}&allowed_kars=${encodeURIComponent(allowed_kars)}&allowed_folas=${encodeURIComponent(allowed_folas)}&limit=${limit}&min_len=${min_len}&max_len=${max_len}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Failed to fetch learn words');
+            const data = await res.json();
+            return data.words;
+        } catch (e) {
+            console.error('Error fetching learn words:', e);
+            return [];
+        }
+    }
 }
 
 const api = new ApiService();
