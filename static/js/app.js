@@ -6,6 +6,24 @@ setInterval(() => {
 }, 30000);
 
 // =====================================================================
+//  SAVE STATE ON EXIT
+// =====================================================================
+window.addEventListener('beforeunload', (e) => {
+    saveYTState(); // localStorage - synchronous, reliable
+    // Use sendBeacon for reliable async API save
+    if (currentVideoId) {
+        const beaconData = JSON.stringify({
+            current_index: ytCurrentIndex,
+            time_spent_ms: ytTypingState.timeSpentMs,
+            keys_total: ytKeystrokes.total,
+            keys_correct: ytKeystrokes.correct,
+            keys_wrong: ytKeystrokes.wrong
+        });
+        navigator.sendBeacon(`/api/videos/${encodeURIComponent(currentVideoId)}/page_state/${currentPartIdx}/${currentPageIdx}`, beaconData);
+    }
+});
+
+// =====================================================================
 //  DATA DIRECTORY WATCHDOG (Real-time Sync)
 // =====================================================================
 let lastFingerprint = null;
@@ -61,6 +79,13 @@ let currentMode = 'learn'; // Default mode
 
 function switchMode(mode) {
     if (window.saveLearnScroll) window.saveLearnScroll();
+    
+    // Save YouTube typing state before switching away
+    if (currentMode === 'youtube' && mode !== 'youtube') {
+        saveYTState();
+        saveCurrentPageStateImmediate();
+    }
+    
     currentMode = mode;
     const tabInstant = document.getElementById('tab-instant');
     const tabYoutube = document.getElementById('tab-youtube');
@@ -1178,11 +1203,18 @@ function openDetail(vid) {
 }
 
 function openConsole(vid, partIdx) {
+    // Save state before switching (video OR chapter)
+    if (currentVideoId) {
+        saveYTState();
+        saveCurrentPageStateImmediate();
+    }
+
     const v = ALL_VIDEOS.find(x => x.id === vid);
     if (!v) return;
     currentVideoId = vid;
     currentPartIdx = partIdx;
 
+    // Restore page index from localStorage (if same part)
     const saved = localStorage.getItem(`yt_active_state_${vid}`);
     if (saved) {
         try {
@@ -1361,6 +1393,18 @@ async function loadPage() {
     const v = ALL_VIDEOS.find(x => x.id === currentVideoId);
     if (!v || !v.parts || !v.parts[currentPartIdx]) return;
 
+    // Reset window state for new content
+    visibleClusterStart = 0;
+    visibleClusterEnd = VISIBLE_CLUSTER_WINDOW;
+    clusterSpans.clear();
+
+    // Clear display to force rebuild
+    const display = document.getElementById('yt-typed-display');
+    if (display) {
+        display.innerHTML = '';
+        delete display.dataset.windowStart; // Force rebuild
+    }
+
     const part = v.parts[currentPartIdx];
     if (!part.pages || part.pages.length === 0) {
         part.pages = [{ label: 'Page 1', content: part.content || '' }];
@@ -1376,19 +1420,22 @@ async function loadPage() {
     ytSequence = result.seq;
     ytNText = result.nText;
 
+    // Now restore state (after sequence is generated, so bounds match)
+    const hasLocalState = await restoreYTState();
+
     // Load page state from API (portable storage) - this is the source of truth
     const apiState = await loadPageStateFromApi();
     
-    // Check if there's any saved progress (cursor position OR keystrokes OR chars)
-    const hasProgress = apiState && (
+    // Check if there's any saved progress in API (cursor position OR keystrokes)
+    const hasApiProgress = apiState && (
         apiState.currentIndex > 0 ||
         apiState.pageKeystrokesTotal > 0 ||
-        apiState.pageCharsCorrect > 0 ||
-        apiState.pageCharsWrong > 0
+        apiState.pageKeystrokesCorrect > 0 ||
+        apiState.pageKeystrokesWrong > 0
     );
     
-    if (hasProgress) {
-        // Restore from API
+    if (hasApiProgress && apiState.currentIndex > ytCurrentIndex) {
+        // API has newer/more progress - use API state
         ytCurrentIndex = apiState.currentIndex || 0;
         // Convert array to Map (sparse array: only defined indices)
         ytTypedCorrectnessMap.clear();
@@ -1423,16 +1470,18 @@ async function loadPage() {
         
         // Sync to localStorage for backup
         saveYTState();
-        
-        clearInterval(ytWpmInterval);
-        updateYTWpm();
-        renderYTTypingArea();
-        updateYTStepGuide();
-        showYTPausedIndicator(true);
-    } else {
-        // No saved progress - initialize fresh
+    } else if (!hasLocalState) {
+        // No saved progress anywhere - initialize fresh
         resetYTPageTyping();
+        return; // resetYTPageTyping() already calls render/update
     }
+
+    // Render the current state (from localStorage or API)
+    clearInterval(ytWpmInterval);
+    updateYTWpm();
+    renderYTTypingArea();
+    updateYTStepGuide();
+    showYTPausedIndicator(!hasLocalState && !hasApiProgress);
 
     // Update navigation UI
     updateNavigationUI();
