@@ -169,7 +169,19 @@ let ytWpmInterval = null;
 let ytSequence = [];
 let ytNText = '';
 let ytCurrentIndex = 0;
-let ytTypedCorrectness = [];
+// Sparse state: Map<clusterIndex, boolean> where true=correct, false=wrong, undefined=not typed
+let ytTypedCorrectnessMap = new Map(); // Replaces ytTypedCorrectness array for O(1) lookups
+
+// Sliding window for bounded display
+let visibleClusterStart = 0;
+let visibleClusterEnd = 200; // Show ~200 clusters at once (enough for ~2-3 pages)
+const VISIBLE_CLUSTER_WINDOW = 200;
+let clusterSpans = new Map(); // clusterIndex -> span element reference
+
+// Batched updates
+let ytKeystrokeCountSinceSave = 0;
+const SAVE_BATCH_SIZE = 50;
+let wpmUpdatePending = false;
 
 function showScreen(name) {
     document.querySelectorAll('#app-youtube .screen').forEach(s => s.classList.remove('active'));
@@ -1197,7 +1209,12 @@ let pageStateSaveTimeout = null;
 
 function savePageStateToApi() {
     if (!currentVideoId) return;
-    const correctnessJson = JSON.stringify(ytTypedCorrectness);
+    // Convert Map to sparse array for JSON serialization
+    const correctnessArray = [];
+    ytTypedCorrectnessMap.forEach((value, key) => {
+        correctnessArray[key] = value;
+    });
+    const correctnessJson = JSON.stringify(correctnessArray);
     fetch(`/api/videos/${encodeURIComponent(currentVideoId)}/page_state/${currentPartIdx}/${currentPageIdx}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1256,12 +1273,18 @@ async function loadPageStateFromApi() {
 // ── Local Storage for Position Only ──
 function saveYTState() {
     if (!currentVideoId) return;
+    // Convert Map to array for JSON serialization (sparse: only store defined values)
+    const correctnessArray = [];
+    ytTypedCorrectnessMap.forEach((value, key) => {
+        correctnessArray[key] = value;
+    });
+
     const state = {
         vid: currentVideoId,
         part: currentPartIdx,
         page: currentPageIdx,
         idx: ytCurrentIndex,
-        correctness: ytTypedCorrectness,
+        correctness: correctnessArray,
         correct: ytTypingState.correct,
         wrong: ytTypingState.wrong,
         completedWords: ytTypingState.completedWords,
@@ -1282,7 +1305,15 @@ async function restoreYTState() {
         const state = JSON.parse(saved);
         if (state.part === currentPartIdx && state.page === currentPageIdx) {
             ytCurrentIndex = state.idx || 0;
-            ytTypedCorrectness = state.correctness || [];
+            // Convert array back to Map (sparse array: only defined indices)
+            ytTypedCorrectnessMap.clear();
+            if (state.correctness && Array.isArray(state.correctness)) {
+                state.correctness.forEach((value, index) => {
+                    if (value !== undefined) {
+                        ytTypedCorrectnessMap.set(index, value);
+                    }
+                });
+            }
             ytTypingState.correct = state.correct || 0;
             ytTypingState.wrong = state.wrong || 0;
             ytTypingState.completedWords = state.completedWords || 0;
@@ -1359,7 +1390,15 @@ async function loadPage() {
     if (hasProgress) {
         // Restore from API
         ytCurrentIndex = apiState.currentIndex || 0;
-        ytTypedCorrectness = apiState.correctness || [];
+        // Convert array to Map (sparse array: only defined indices)
+        ytTypedCorrectnessMap.clear();
+        if (apiState.correctness && Array.isArray(apiState.correctness)) {
+            apiState.correctness.forEach((value, index) => {
+                if (value !== undefined) {
+                    ytTypedCorrectnessMap.set(index, value);
+                }
+            });
+        }
         ytTypingState.completedWords = apiState.completedWords || 0;
         ytTypingState.timeSpentMs = apiState.timeSpentMs || 0;
         ytKeystrokes = {
@@ -1410,7 +1449,7 @@ async function loadPage() {
 
 function resetYTPageTyping() {
     ytCurrentIndex = 0;
-    ytTypedCorrectness = [];
+    ytTypedCorrectnessMap.clear();
     ytTypingState = { startTime: null, lastStartTime: null, timeSpentMs: 0, completedWords: 0, completedMistakes: 0, lastKeystrokeTime: null };
     ytKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
     ytPageKeystrokes = { total: 0, correct: 0, wrong: 0 };
@@ -1449,7 +1488,7 @@ function confirmResetPage() {
     
     // Reset all typing state
     ytCurrentIndex = 0;
-    ytTypedCorrectness = [];
+    ytTypedCorrectnessMap.clear();
     ytTypingState = { startTime: null, lastStartTime: null, timeSpentMs: 0, completedWords: 0, correct: 0, wrong: 0, completedMistakes: 0, lastKeystrokeTime: null };
     ytKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
     ytPageKeystrokes = { total: 0, correct: 0, wrong: 0 };
@@ -1465,10 +1504,12 @@ function confirmResetPage() {
 
 function renderYTTypingArea() {
     const display = document.getElementById('yt-typed-display');
-    display.innerHTML = '';
+    if (!display) return;
+
     const bounds = getClusterBoundaries(ytSequence);
     const displayClusters = getDisplayClusters(bounds, ytNText);
 
+    // Find current cluster index
     let currentClusterIdx = -1;
     for (let ci = 0; ci < bounds.length; ci++) {
         const stepsInCluster = ytSequence.filter(s => s.clusterEnd === bounds[ci].end);
@@ -1481,23 +1522,63 @@ function renderYTTypingArea() {
         if (ytCurrentIndex >= stepsBeforeThis + stepsInCluster.length) currentClusterIdx = ci + 1;
     }
 
-    displayClusters.forEach(dc => {
-        const span = document.createElement('span');
-        span.textContent = dc.text;
-        span.className = 'char';
-
-        const indices = dc.clusterIndices;
-        const minIdx = indices[0];
-        const maxIdx = indices[indices.length - 1];
-
-        if (maxIdx < currentClusterIdx) {
-            const allCorrect = indices.every(ci => ytTypedCorrectness[ci] !== false);
-            span.classList.add(allCorrect ? 'correct' : 'wrong');
-        } else if (minIdx <= currentClusterIdx && currentClusterIdx <= maxIdx) {
-            span.classList.add('current');
+    // Adjust visible window to keep current cursor in view
+    if (currentClusterIdx >= 0) {
+        if (currentClusterIdx < visibleClusterStart || currentClusterIdx >= visibleClusterEnd) {
+            visibleClusterStart = Math.max(0, currentClusterIdx - 50);
+            visibleClusterEnd = Math.min(displayClusters.length, visibleClusterStart + VISIBLE_CLUSTER_WINDOW);
         }
-        display.appendChild(span);
-    });
+    }
+
+    // Only render visible clusters (differential update)
+    const visibleClusters = displayClusters.slice(visibleClusterStart, visibleClusterEnd);
+
+    // If display is empty or window changed, rebuild visible area
+    if (display.children.length === 0 || parseInt(display.dataset.windowStart || '0') !== visibleClusterStart) {
+        display.innerHTML = '';
+        clusterSpans.clear();
+        display.dataset.windowStart = visibleClusterStart;
+
+        visibleClusters.forEach((dc, offset) => {
+            const span = document.createElement('span');
+            span.textContent = dc.text;
+            span.className = 'char';
+            span.dataset.clusterDisplayIdx = visibleClusterStart + offset;
+
+            const indices = dc.clusterIndices;
+            const minIdx = indices[0];
+            const maxIdx = indices[indices.length - 1];
+
+            if (maxIdx < currentClusterIdx) {
+                const allCorrect = indices.every(ci => ytTypedCorrectnessMap.get(ci) !== false);
+                span.classList.add(allCorrect ? 'correct' : 'wrong');
+            } else if (minIdx <= currentClusterIdx && currentClusterIdx <= maxIdx) {
+                span.classList.add('current');
+            }
+
+            display.appendChild(span);
+            indices.forEach(ci => clusterSpans.set(ci, span));
+        });
+    } else {
+        // Differential update: only update clusters that changed
+        visibleClusters.forEach((dc, offset) => {
+            const span = display.children[offset];
+            if (!span) return;
+
+            const indices = dc.clusterIndices;
+            const minIdx = indices[0];
+            const maxIdx = indices[indices.length - 1];
+
+            // Update class based on current state
+            span.classList.remove('correct', 'wrong', 'current');
+            if (maxIdx < currentClusterIdx) {
+                const allCorrect = indices.every(ci => ytTypedCorrectnessMap.get(ci) !== false);
+                span.classList.add(allCorrect ? 'correct' : 'wrong');
+            } else if (minIdx <= currentClusterIdx && currentClusterIdx <= maxIdx) {
+                span.classList.add('current');
+            }
+        });
+    }
 
     // Auto-scroll logic: ensures active cursor is comfortably in view
     const currentSpan = display.querySelector('.char.current');
@@ -1585,7 +1666,7 @@ document.getElementById('yt-console-input').addEventListener('keydown', e => {
         ytCurrentIndex--;
         const prevStep = ytSequence[ytCurrentIndex];
         const ci = getClusterBoundaries(ytSequence).findIndex(b => b.end === prevStep.clusterEnd || b.end === prevStep.targetEnd);
-        if (ci >= 0) ytTypedCorrectness[ci] = undefined;
+        if (ci >= 0) ytTypedCorrectnessMap.delete(ci);
         renderYTTypingArea();
         updateYTStepGuide();
         updateYTWpm();
@@ -1672,8 +1753,8 @@ document.getElementById('yt-console-input').addEventListener('keydown', e => {
         ytPageKeystrokes.correct++;
         if (isLastInCluster) {
             const ci = getClusterBoundaries(ytSequence).findIndex(b => b.end === curStep.targetEnd);
-            if (ytTypedCorrectness[ci] === undefined) {
-                ytTypedCorrectness[ci] = true;
+            if (!ytTypedCorrectnessMap.has(ci)) {
+                ytTypedCorrectnessMap.set(ci, true);
             }
         }
         ytCurrentIndex++;
@@ -1684,14 +1765,14 @@ document.getElementById('yt-console-input').addEventListener('keydown', e => {
         ytPageKeystrokes.wrong++;
         if (isLastInCluster) {
             const ci = getClusterBoundaries(ytSequence).findIndex(b => b.end === curStep.targetEnd);
-            if (ytTypedCorrectness[ci] === undefined) {
-                ytTypedCorrectness[ci] = false;
+            if (!ytTypedCorrectnessMap.has(ci)) {
+                ytTypedCorrectnessMap.set(ci, false);
             }
             ytCurrentIndex++;
         } else {
             const ci = getClusterBoundaries(ytSequence).findIndex(b => b.end === curStep.clusterEnd);
-            if (ytTypedCorrectness[ci] === undefined) {
-                ytTypedCorrectness[ci] = false;
+            if (!ytTypedCorrectnessMap.has(ci)) {
+                ytTypedCorrectnessMap.set(ci, false);
             }
             ytCurrentIndex++;
         }
@@ -1699,8 +1780,22 @@ document.getElementById('yt-console-input').addEventListener('keydown', e => {
 
     renderYTTypingArea();
     updateYTStepGuide();
-    updateYTWpm();
-    saveYTState();
+
+    // Throttle WPM updates using requestAnimationFrame
+    if (!wpmUpdatePending) {
+        wpmUpdatePending = true;
+        requestAnimationFrame(() => {
+            updateYTWpm();
+            wpmUpdatePending = false;
+        });
+    }
+
+    // Batch saves: only save every SAVE_BATCH_SIZE keystrokes
+    ytKeystrokeCountSinceSave++;
+    if (ytKeystrokeCountSinceSave >= SAVE_BATCH_SIZE) {
+        saveYTState();
+        ytKeystrokeCountSinceSave = 0;
+    }
 
     if (ytCurrentIndex >= ytSequence.length) {
         clearInterval(ytWpmInterval);
@@ -1789,21 +1884,12 @@ document.getElementById('yt-console-input').addEventListener('keydown', e => {
 });
 
 function getCompletedWords() {
-    if (ytCurrentIndex === 0) return 0;
     const bounds = getClusterBoundaries(ytSequence);
-    const end = Math.max(
-        ytSequence[ytCurrentIndex - 1].targetEnd || 0,
-        ytSequence[ytCurrentIndex - 1].clusterEnd || 0
-    );
-    const textTyped = ytNText.slice(0, end).trim();
-    if (!textTyped) return 0;
-
     let correctWords = 0;
     let inWord = false;
     let wordIsCorrect = true;
 
     for (let i = 0; i < bounds.length; i++) {
-        if (bounds[i].end > end) break;
         const clusterText = ytNText.slice(bounds[i].start, bounds[i].end);
         const isSpace = /\s/.test(clusterText) || clusterText === '\n';
 
@@ -1812,7 +1898,7 @@ function getCompletedWords() {
                 inWord = true;
                 wordIsCorrect = true;
             }
-            if (ytTypedCorrectness[i] === false) {
+            if (ytTypedCorrectnessMap.get(i) === false) {
                 wordIsCorrect = false;
             }
         } else {
@@ -1855,7 +1941,7 @@ function updateYTWpm() {
         elapsed += (Date.now() - ytTypingState.lastStartTime);
     }
     const mins = elapsed / 60000;
-    const currentMistakes = getCompletedMistakes(ytTypedCorrectness, getClusterBoundaries(ytSequence), ytNText);
+    const currentMistakes = getCompletedMistakes(ytTypedCorrectnessMap, getClusterBoundaries(ytSequence), ytNText);
     const totalMistakes = ytTypingState.completedMistakes + currentMistakes;
     ytKeystrokes.mistakes = totalMistakes;
 
@@ -2038,7 +2124,7 @@ function nextPage() {
 
         // Accumulate current page progress into Part total (this is correct)
         ytTypingState.completedWords += getCompletedWords();
-        ytTypingState.completedMistakes += getCompletedMistakes(ytTypedCorrectness, getClusterBoundaries(ytSequence), ytNText);
+        ytTypingState.completedMistakes += getCompletedMistakes(ytTypedCorrectnessMap, getClusterBoundaries(ytSequence), ytNText);
 
         if (ytTypingState.lastStartTime && !ytTypingState.isPaused) {
             ytTypingState.timeSpentMs += (Date.now() - ytTypingState.lastStartTime);
@@ -2046,7 +2132,7 @@ function nextPage() {
 
         // Reset page-level variables for the new page (loadPage will restore if there's saved state)
         ytCurrentIndex = 0;
-        ytTypedCorrectness = [];
+        ytTypedCorrectnessMap.clear();
         ytTypingState.startTime = null;
         ytTypingState.lastStartTime = null;
         ytTypingState.isPaused = false;
@@ -2081,9 +2167,9 @@ function nextPartFromConsole() {
         saveCurrentPageStateImmediate();
         currentPartIdx++;
         currentPageIdx = 0;
-        
+
         ytCurrentIndex = 0;
-        ytTypedCorrectness = [];
+        ytTypedCorrectnessMap.clear();
         ytTypingState.completedWords = 0;
         ytTypingState.completedMistakes = 0;
         ytTypingState.timeSpentMs = 0;
@@ -2091,7 +2177,7 @@ function nextPartFromConsole() {
         ytTypingState.lastStartTime = null;
         ytTypingState.isPaused = false;
         ytKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
-        
+
         saveYTState();
         loadPage();
     }
@@ -2106,9 +2192,9 @@ function prevPart() {
         currentPartIdx--;
         const prevPart = v.parts[currentPartIdx];
         currentPageIdx = (prevPart.pages ? prevPart.pages.length : 1) - 1;
-        
+
         ytCurrentIndex = 0;
-        ytTypedCorrectness = [];
+        ytTypedCorrectnessMap.clear();
         ytTypingState.completedWords = 0;
         ytTypingState.completedMistakes = 0;
         ytTypingState.timeSpentMs = 0;
@@ -2116,7 +2202,7 @@ function prevPart() {
         ytTypingState.lastStartTime = null;
         ytTypingState.isPaused = false;
         ytKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
-        
+
         saveYTState();
         loadPage();
     }
@@ -3011,6 +3097,14 @@ function validateTypingSession(sessionData) {
  * @returns {number} Count of words with at least one error
  */
 function getCompletedMistakes(correctness, bounds, nText) {
+    // Handle both Map and Array for backwards compatibility
+    const getCorrectness = (idx) => {
+        if (correctness instanceof Map) {
+            return correctness.get(idx);
+        }
+        return correctness[idx];
+    };
+
     let mistakes = 0;
     let inWord = false;
     let wordHasError = false;
@@ -3025,7 +3119,7 @@ function getCompletedMistakes(correctness, bounds, nText) {
                 inWord = true;
                 wordHasError = false;
             }
-            if (correctness[i] === false) {
+            if (getCorrectness(i) === false) {
                 wordHasError = true;
             }
         } else {
