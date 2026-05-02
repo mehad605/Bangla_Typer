@@ -1,6 +1,6 @@
 [package]
 name = "bangla-typer"
-version = "1.0.0"
+version = "1.1.1"
 description = "Bangla Typer - Desktop Bangla typing trainer"
 edition = "2021"
 

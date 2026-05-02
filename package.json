@@ -1,6 +1,6 @@
 {
   "name": "bangla-typer",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "scripts": {
     "tauri": "tauri",
@@ -19,7 +19,9 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/__tests__/**/*.test.js"],
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
     "collectCoverageFrom": [
       "static/js/wpm-calculator.js"
     ]
