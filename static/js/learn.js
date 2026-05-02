@@ -324,6 +324,50 @@ function resetLearnTypingState() {
     };
 }
 
+window.focusLearnInput = function() {
+    const consoleScreen = document.getElementById('learn-console-screen');
+    if (consoleScreen) {
+        consoleScreen.focus({ preventScroll: true });
+        return;
+    }
+    const input = document.getElementById('learn-hidden-input');
+    if (!input) return;
+    input.focus({ preventScroll: true });
+};
+
+function isLearnTypingActive() {
+    return learnCurrentView === 'console'
+        && document.getElementById('learn-console-screen')
+        && !document.getElementById('modal-learn-results')?.classList.contains('open');
+}
+
+function shouldIgnoreLearnTypingTarget(target) {
+    if (!target) return false;
+    if (target.id === 'learn-hidden-input') return false;
+    if (target.closest?.('.modal-overlay.open')) return true;
+    if (target.isContentEditable) return true;
+    const tagName = target.tagName;
+    return tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT';
+}
+
+function routeLearnInput(e) {
+    if (e.__learnTypingHandled) return;
+    if (!isLearnTypingActive()) return;
+    if (shouldIgnoreLearnTypingTarget(e.target)) return;
+    e.__learnTypingHandled = true;
+    handleLearnInput(e);
+}
+
+document.addEventListener('keydown', routeLearnInput, true);
+
+function bindLearnTypingEvents() {
+    const consoleScreen = document.getElementById('learn-console-screen');
+    if (!consoleScreen) return;
+    consoleScreen.addEventListener('keydown', routeLearnInput);
+    consoleScreen.addEventListener('click', window.focusLearnInput);
+    window.focusLearnInput();
+}
+
 // Initialize Learn Mode UI
 window.initLearnMode = function() {
     loadLearnProgress();
@@ -689,7 +733,7 @@ function renderLearnConsole() {
     const section = Object.values(LEARN_DATA).find(s => s.lessons.includes(currentLearnLesson));
     
     let html = `
-        <div class="learn-screen active" id="learn-console-screen" style="flex:1; display:flex; flex-direction:column; background: var(--bg);">
+        <div class="learn-screen active" id="learn-console-screen" tabindex="0" style="flex:1; display:flex; flex-direction:column; background: var(--bg); outline: none;">
             <div class="screen-header">
                 <div class="breadcrumb">
                     <a onclick="renderLearnMain()">Learn</a>
@@ -734,7 +778,7 @@ function renderLearnConsole() {
                         <div style="display:flex; gap: 0.8rem; font-size: 0.9em;">
                             <span>কীস্ট্রোক: <span class="stat-val stat-total" id="learn-stat-keys-total">০</span></span>
                             <span>✓ <span class="stat-val stat-correct" id="learn-stat-keys-correct">০</span></span>
-                            <span>✗ <span class="stat-val stat-wrong" id="learn-stat-wrong">০</span></span>
+                            <span>✗ <span class="stat-val stat-wrong" id="learn-stat-keys-wrong">০</span></span>
                         </div>
                         <div style="display:flex; gap: 0.8rem; font-size: 0.95em; color: var(--accent); margin-top: 2px;">
                             <span>গতি (WPM): <span class="stat-val stat-correct" id="learn-stat-wpm">০</span></span>
@@ -765,8 +809,7 @@ function renderLearnConsole() {
     `;
     container.innerHTML = html;
     if (typeof drawKeyboard !== 'undefined') drawKeyboard('learn-svg-container', 'learn-');
-    const input = document.getElementById('learn-hidden-input');
-    if (input) input.addEventListener('keydown', handleLearnInput);
+    bindLearnTypingEvents();
     updateLearnDisplay();
     updateLearnStepGuide();
 }
