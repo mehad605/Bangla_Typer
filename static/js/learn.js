@@ -811,6 +811,7 @@ function renderLearnConsole() {
 
 async function newLearnContent() {
     if (!currentLearnLesson || !currentDifficulty) return;
+    document.getElementById('modal-learn-results').classList.remove('open');
     
     const section = Object.values(LEARN_DATA).find(s => s.lessons.includes(currentLearnLesson));
     const sectionKey = Object.keys(LEARN_DATA).find(k => LEARN_DATA[k] === section);
