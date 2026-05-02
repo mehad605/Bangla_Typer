@@ -59,11 +59,6 @@ class TypingEngine {
                         </div>
                     </div>
                     <div class="stats" style="flex-direction: column; align-items: flex-end; gap: 0.5rem;">
-                        <div style="display:flex; gap: 0.8rem;">
-                            <span>Chars: <span class="stat-val stat-total" id="${p}stat-chars">০</span></span>
-                            <span>✓ <span class="stat-val stat-correct" id="${p}stat-correct">০</span></span>
-                            <span>✗ <span class="stat-val stat-wrong" id="${p}stat-wrong">০</span></span>
-                        </div>
                     </div>
                 </div>
                 
@@ -137,11 +132,7 @@ class TypingEngine {
             const prevStep = this.sequence[this.currentIndex];
             const bounds = this.getClusterBoundaries(this.sequence);
             const ci = bounds.findIndex(b => b.end === prevStep.clusterEnd || b.end === prevStep.targetEnd);
-            if (ci >= 0 && this.typedCorrectness[ci] !== undefined) {
-                if (this.typedCorrectness[ci] === true) this.keystrokes.correct--;
-                else if (this.typedCorrectness[ci] === false) this.keystrokes.wrong--;
-                this.typedCorrectness[ci] = undefined;
-            }
+            if (ci >= 0) this.typedCorrectness[ci] = undefined;
             this._updateStats();
             this.updateDisplay();
             this.updateStepGuide();
@@ -241,18 +232,6 @@ class TypingEngine {
         const stats = this.wpmCalc.getStats(this.keystrokes.total, this.keystrokes.correct, mistakes);
 
         this.onStatsUpdate(stats);
-
-        const charsEl = document.getElementById(`${p}stat-chars`);
-        const correctEl = document.getElementById(`${p}stat-correct`);
-        const wrongEl = document.getElementById(`${p}stat-wrong`);
-
-        const done = this.typedCorrectness.filter(v => v !== undefined).length;
-        const correct = this.typedCorrectness.filter(v => v === true).length;
-        const wrong = this.typedCorrectness.filter(v => v === false).length;
-        
-        if (charsEl) charsEl.textContent = toBn(done);
-        if (correctEl) correctEl.textContent = toBn(correct);
-        if (wrongEl) wrongEl.textContent = toBn(wrong);
     }
 
     updateDisplay() {

@@ -770,11 +770,6 @@ function renderLearnConsole() {
                         </div>
                     </div>
                     <div class="stats" style="flex-direction: column; align-items: flex-end; gap: 0.5rem;">
-                        <div style="display:flex; gap: 0.8rem;">
-                            <span>অক্ষর: <span class="stat-val stat-total" id="learn-stat-chars">০</span></span>
-                            <span>✓ <span class="stat-val stat-correct" id="learn-stat-correct">০</span></span>
-                            <span>✗ <span class="stat-val stat-wrong" id="learn-stat-wrong">০</span></span>
-                        </div>
                         <div style="display:flex; gap: 0.8rem; font-size: 0.9em;">
                             <span>কীস্ট্রোক: <span class="stat-val stat-total" id="learn-stat-keys-total">০</span></span>
                             <span>✓ <span class="stat-val stat-correct" id="learn-stat-keys-correct">০</span></span>
@@ -905,12 +900,7 @@ function handleLearnInput(e) {
         const prevStep = learnSequence[learnCurrentIndex];
         const bounds = getClusterBoundaries(learnSequence);
         const ci = bounds.findIndex(b => b.end === prevStep.clusterEnd || b.end === prevStep.targetEnd);
-        
-        if (ci >= 0 && learnTypedCorrectness[ci] !== undefined) {
-            if (learnTypedCorrectness[ci] === true) learnKeystrokes.correct--;
-            else if (learnTypedCorrectness[ci] === false) learnKeystrokes.wrong--;
-            learnTypedCorrectness[ci] = undefined;
-        }
+        if (ci >= 0) learnTypedCorrectness[ci] = undefined;
         updateLearnStats();
         updateLearnDisplay();
         updateLearnStepGuide();
@@ -923,6 +913,14 @@ function handleLearnInput(e) {
         learnTypingState.startTime = Date.now();
         if (learnTypingInterval) clearInterval(learnTypingInterval);
         learnTypingInterval = setInterval(() => {
+            let currentWpm = 0;
+            const elapsedMs = Date.now() - learnTypingState.startTime;
+            if (elapsedMs > 0) {
+                const mists = getCompletedMistakes(learnTypedCorrectness, getClusterBoundaries(learnSequence), learnNText);
+                currentWpm = WPMCalculator.calculateNetWPM(learnKeystrokes.total, mists, elapsedMs, learnKeystrokes.correct);
+            }
+            learnTypingState.wpmHistory.push(currentWpm);
+            learnTypingState.errHistory.push(learnKeystrokes.wrong);
             updateLearnStats();
         }, 1000);
     }
@@ -957,8 +955,8 @@ function handleLearnInput(e) {
     } else {
         learnKeystrokes.total++;
         learnKeystrokes.wrong++;
-        const ci = getClusterBoundaries(learnSequence).findIndex(b => b.end === (isLastInCluster ? curStep.targetEnd : curStep.clusterEnd));
-        learnTypedCorrectness[ci] = false;
+        const ci = getClusterBoundaries(learnSequence).findIndex(b => b.end === curStep.clusterEnd);
+        if (ci >= 0) learnTypedCorrectness[ci] = false;
         learnCurrentIndex++;
     }
 
@@ -971,14 +969,6 @@ function handleLearnInput(e) {
 }
 
 function updateLearnStats() {
-    const done = learnTypedCorrectness.filter(v => v !== undefined).length;
-    const correct = learnTypedCorrectness.filter(v => v === true).length;
-    const wrong = learnTypedCorrectness.filter(v => v === false).length;
-    
-    if (document.getElementById('learn-stat-chars')) document.getElementById('learn-stat-chars').textContent = toBn(done);
-    if (document.getElementById('learn-stat-correct')) document.getElementById('learn-stat-correct').textContent = toBn(correct);
-    if (document.getElementById('learn-stat-wrong')) document.getElementById('learn-stat-wrong').textContent = toBn(wrong);
-
     if (document.getElementById('learn-stat-keys-total')) document.getElementById('learn-stat-keys-total').textContent = toBn(learnKeystrokes.total);
     if (document.getElementById('learn-stat-keys-correct')) document.getElementById('learn-stat-keys-correct').textContent = toBn(learnKeystrokes.correct);
     if (document.getElementById('learn-stat-keys-wrong')) document.getElementById('learn-stat-keys-wrong').textContent = toBn(learnKeystrokes.wrong);
@@ -1002,18 +992,21 @@ function updateLearnStats() {
 function finishLearnTyping() {
     if (learnTypingInterval) clearInterval(learnTypingInterval);
     learnTypingState.endTime = Date.now();
-    
+
     const timeMs = Math.max(0, learnTypingState.endTime - learnTypingState.startTime);
     const mistakes = getCompletedMistakes(learnTypedCorrectness, getClusterBoundaries(learnSequence), learnNText);
     const wpm = WPMCalculator.calculateNetWPM(learnKeystrokes.total, mistakes, timeMs, learnKeystrokes.correct);
     const acc = WPMCalculator.calculateAccuracy(learnKeystrokes.correct, learnKeystrokes.total);
-    
+
+    learnTypingState.wpmHistory.push(wpm);
+    learnTypingState.errHistory.push(learnKeystrokes.wrong);
+
     const progKey = `${currentLearnLesson.id}_${currentDifficulty.id}`;
     let prog = learnProgress[progKey];
     if (wpm >= currentDifficulty.wpm) prog.completed = true;
     if (wpm > prog.bestWpm) prog.bestWpm = wpm;
     prog.lastWpm = wpm;
-    
+
     saveLearnProgress();
     showLearnResults(wpm, acc, timeMs);
 }

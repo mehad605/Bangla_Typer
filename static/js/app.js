@@ -162,10 +162,9 @@ let ytSessionResults = []; // Track results for the current continuous session
 let activeTasksCount = 0;
 const YT_MAX_TASKS = 3;
 
-let ytTypingState = { startTime: null, lastStartTime: null, timeSpentMs: 0, correct: 0, wrong: 0, mistakes: 0, lastKeystrokeTime: null };
+let ytTypingState = { startTime: null, lastStartTime: null, timeSpentMs: 0, completedWords: 0, mistakes: 0, lastKeystrokeTime: null };
 let ytKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
 let ytPageKeystrokes = { total: 0, correct: 0, wrong: 0 };
-let ytPageChars = { correct: 0, wrong: 0 };
 let ytWpmInterval = null;
 let ytSequence = [];
 let ytNText = '';
@@ -1211,8 +1210,6 @@ function savePageStateToApi() {
             keys_correct: ytKeystrokes.correct || 0,
             keys_wrong: ytKeystrokes.wrong || 0,
             mistakes: ytKeystrokes.mistakes || 0,
-            page_chars_correct: ytPageChars.correct || 0,
-            page_chars_wrong: ytPageChars.wrong || 0,
             page_keystrokes_total: ytPageKeystrokes.total || 0,
             page_keystrokes_correct: ytPageKeystrokes.correct || 0,
             page_keystrokes_wrong: ytPageKeystrokes.wrong || 0
@@ -1245,8 +1242,6 @@ async function loadPageStateFromApi() {
                 keysCorrect: data.keys_correct,
                 keysWrong: data.keys_wrong,
                 mistakes: data.mistakes,
-                pageCharsCorrect: data.page_chars_correct || 0,
-                pageCharsWrong: data.page_chars_wrong || 0,
                 pageKeystrokesTotal: data.page_keystrokes_total || 0,
                 pageKeystrokesCorrect: data.page_keystrokes_correct || 0,
                 pageKeystrokesWrong: data.page_keystrokes_wrong || 0
@@ -1381,10 +1376,6 @@ async function loadPage() {
         ytTypingState.isPaused = false;
         
         // Restore page-specific stats
-        ytPageChars = {
-            correct: apiState.pageCharsCorrect || 0,
-            wrong: apiState.pageCharsWrong || 0
-        };
         ytPageKeystrokes = {
             total: apiState.pageKeystrokesTotal || 0,
             correct: apiState.pageKeystrokesCorrect || 0,
@@ -1420,10 +1411,9 @@ async function loadPage() {
 function resetYTPageTyping() {
     ytCurrentIndex = 0;
     ytTypedCorrectness = [];
-    ytTypingState = { startTime: null, lastStartTime: null, timeSpentMs: 0, completedWords: 0, correct: 0, wrong: 0, completedMistakes: 0, lastKeystrokeTime: null };
+    ytTypingState = { startTime: null, lastStartTime: null, timeSpentMs: 0, completedWords: 0, completedMistakes: 0, lastKeystrokeTime: null };
     ytKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
     ytPageKeystrokes = { total: 0, correct: 0, wrong: 0 };
-    ytPageChars = { correct: 0, wrong: 0 };
 
     clearInterval(ytWpmInterval);
 
@@ -1463,7 +1453,6 @@ function confirmResetPage() {
     ytTypingState = { startTime: null, lastStartTime: null, timeSpentMs: 0, completedWords: 0, correct: 0, wrong: 0, completedMistakes: 0, lastKeystrokeTime: null };
     ytKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
     ytPageKeystrokes = { total: 0, correct: 0, wrong: 0 };
-    ytPageChars = { correct: 0, wrong: 0 };
 
     clearInterval(ytWpmInterval);
 
@@ -1596,11 +1585,7 @@ document.getElementById('yt-console-input').addEventListener('keydown', e => {
         ytCurrentIndex--;
         const prevStep = ytSequence[ytCurrentIndex];
         const ci = getClusterBoundaries(ytSequence).findIndex(b => b.end === prevStep.clusterEnd || b.end === prevStep.targetEnd);
-        if (ci >= 0 && ytTypedCorrectness[ci] !== undefined) {
-            if (ytTypedCorrectness[ci] === true) ytTypingState.correct--;
-            else if (ytTypedCorrectness[ci] === false) ytTypingState.wrong--;
-            ytTypedCorrectness[ci] = undefined;
-        }
+        if (ci >= 0) ytTypedCorrectness[ci] = undefined;
         renderYTTypingArea();
         updateYTStepGuide();
         updateYTWpm();
@@ -1689,8 +1674,6 @@ document.getElementById('yt-console-input').addEventListener('keydown', e => {
             const ci = getClusterBoundaries(ytSequence).findIndex(b => b.end === curStep.targetEnd);
             if (ytTypedCorrectness[ci] === undefined) {
                 ytTypedCorrectness[ci] = true;
-                ytTypingState.correct++;
-                ytPageChars.correct++;
             }
         }
         ytCurrentIndex++;
@@ -1703,16 +1686,12 @@ document.getElementById('yt-console-input').addEventListener('keydown', e => {
             const ci = getClusterBoundaries(ytSequence).findIndex(b => b.end === curStep.targetEnd);
             if (ytTypedCorrectness[ci] === undefined) {
                 ytTypedCorrectness[ci] = false;
-                ytTypingState.wrong++;
-                ytPageChars.wrong++;
             }
             ytCurrentIndex++;
         } else {
             const ci = getClusterBoundaries(ytSequence).findIndex(b => b.end === curStep.clusterEnd);
             if (ytTypedCorrectness[ci] === undefined) {
                 ytTypedCorrectness[ci] = false;
-                ytTypingState.wrong++;
-                ytPageChars.wrong++;
             }
             ytCurrentIndex++;
         }
@@ -1892,14 +1871,8 @@ function updateYTWpm() {
     document.getElementById('yt-stat-wpm').textContent = toBn(wpm);
     document.getElementById('yt-stat-acc').textContent = toBn(acc) + '%';
 
-    // Show page-level character stats in right panel
-    if (document.getElementById('yt-stat-chars')) {
-        const pageTotalChars = ytPageChars.correct + ytPageChars.wrong;
-        document.getElementById('yt-stat-chars').textContent = toBn(pageTotalChars);
-        document.getElementById('yt-stat-correct').textContent = toBn(ytPageChars.correct);
-        document.getElementById('yt-stat-wrong').textContent = toBn(ytPageChars.wrong);
-
-        // Show page-level keystroke stats
+    // Show page-level keystroke stats
+    if (document.getElementById('yt-stat-keys-total')) {
         document.getElementById('yt-stat-keys-total').textContent = toBn(ytPageKeystrokes.total);
         document.getElementById('yt-stat-keys-correct').textContent = toBn(ytPageKeystrokes.correct);
         document.getElementById('yt-stat-keys-wrong').textContent = toBn(ytPageKeystrokes.wrong);
@@ -2078,7 +2051,7 @@ function nextPage() {
         ytTypingState.lastStartTime = null;
         ytTypingState.isPaused = false;
         ytPageKeystrokes = { total: 0, correct: 0, wrong: 0 };
-        ytPageChars = { correct: 0, wrong: 0 };
+        ytPageKeystrokes = { total: 0, correct: 0, wrong: 0 };
 
         // Don't save to localStorage - loadPage will handle loading from API
         loadPage();
@@ -3274,11 +3247,7 @@ document.getElementById('hidden-input').addEventListener('keydown', e => {
         currentIndex--;
         const prevStep = currentSequence[currentIndex];
         const ci = getClusterBoundaries(currentSequence).findIndex(b => b.end === prevStep.clusterEnd || b.end === prevStep.targetEnd);
-        if (ci >= 0 && typedCorrectness[ci] !== undefined) {
-            if (typedCorrectness[ci] === true) instKeystrokes.correct--;
-            else if (typedCorrectness[ci] === false) instKeystrokes.wrong--;
-            typedCorrectness[ci] = undefined;
-        }
+        if (ci >= 0) typedCorrectness[ci] = undefined;
         updateStats();
         renderTypingArea();
         updateStepGuide();
@@ -3410,13 +3379,6 @@ document.getElementById('hidden-input').addEventListener('keydown', e => {
 });
 
 function updateStats() {
-    const done = typedCorrectness.filter(v => v !== undefined).length;
-    const correct = typedCorrectness.filter(v => v === true).length;
-    const wrong = typedCorrectness.filter(v => v === false).length;
-    document.getElementById('stat-chars').textContent = toBn(done);
-    document.getElementById('stat-correct').textContent = toBn(correct);
-    document.getElementById('stat-wrong').textContent = toBn(wrong);
-
     document.getElementById('stat-keys-total').textContent = toBn(instKeystrokes.total);
     document.getElementById('stat-keys-correct').textContent = toBn(instKeystrokes.correct);
     document.getElementById('stat-keys-wrong').textContent = toBn(instKeystrokes.wrong);
