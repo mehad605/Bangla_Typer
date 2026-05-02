@@ -48,7 +48,7 @@ setInterval(async () => {
             } else if (activeYTScreen === 'detail') {
                 // If in detail view, refresh library and reopen detail to show updated content
                 await fetchLibrary(true);
-                if (currentVideoId) openDetail(currentVideoId);
+                if (activeDetailVid) openDetail(activeDetailVid);
             } else if (activeYTScreen === 'console') {
                 // If in console, we just refresh the library in background so when they go back it's ready
                 await fetchLibrary(true);
@@ -181,6 +181,7 @@ function getThemeColor(varName) {
 }
 
 let currentVideoId = null;
+let activeDetailVid = null;
 let currentPartIdx = 0;
 let currentPageIdx = 0;
 let ytSessionResults = []; // Track results for the current continuous session
@@ -1002,7 +1003,7 @@ function renderLibrary(filteredVideos = null) {
 function openDetail(vid) {
     const v = ALL_VIDEOS.find(x => x.id === vid);
     if (!v) return;
-    currentVideoId = vid;
+    activeDetailVid = vid;
     ytSessionResults = []; // Reset session for a new direct detail-start
 
     let shortTitle = v.title.slice(0, 30) + (v.title.length > 30 ? '…' : '');
@@ -1209,10 +1210,21 @@ function openConsole(vid, partIdx) {
         saveCurrentPageStateImmediate();
     }
 
+    const isNewVideo = vid !== currentVideoId;
+
     const v = ALL_VIDEOS.find(x => x.id === vid);
     if (!v) return;
     currentVideoId = vid;
     currentPartIdx = partIdx;
+
+    // Reset typing state when switching to a different video to prevent state leaking
+    if (isNewVideo) {
+        ytCurrentIndex = 0;
+        ytTypedCorrectnessMap.clear();
+        ytTypingState = { startTime: null, lastStartTime: null, timeSpentMs: 0, completedWords: 0, completedMistakes: 0, lastKeystrokeTime: null };
+        ytKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
+        ytPageKeystrokes = { total: 0, correct: 0, wrong: 0 };
+    }
 
     // Restore page index from localStorage (if same part)
     const saved = localStorage.getItem(`yt_active_state_${vid}`);
@@ -1254,7 +1266,7 @@ function savePageStateToApi() {
             current_index: ytCurrentIndex,
             correctness_json: correctnessJson,
             completed_words: ytTypingState.completedWords || 0,
-            time_spent_ms: ytTypingState.timeSpentMs || 0,
+            time_spent_ms: getYTTotalElapsed(),
             keys_total: ytKeystrokes.total || 0,
             keys_correct: ytKeystrokes.correct || 0,
             keys_wrong: ytKeystrokes.wrong || 0,
@@ -1320,12 +1332,15 @@ function saveYTState() {
         correct: ytTypingState.correct,
         wrong: ytTypingState.wrong,
         completedWords: ytTypingState.completedWords,
-        timeSpentMs: ytTypingState.timeSpentMs,
+        timeSpentMs: getYTTotalElapsed(),
         keysTotal: ytKeystrokes.total,
         keysCorrect: ytKeystrokes.correct,
         keysWrong: ytKeystrokes.wrong,
         mistakes: ytKeystrokes.mistakes || 0,
-        completedMistakes: ytTypingState.completedMistakes || 0
+        completedMistakes: ytTypingState.completedMistakes || 0,
+        pageKeysTotal: ytPageKeystrokes.total,
+        pageKeysCorrect: ytPageKeystrokes.correct,
+        pageKeysWrong: ytPageKeystrokes.wrong
     };
     localStorage.setItem(`yt_active_state_${currentVideoId}`, JSON.stringify(state));
     debouncedSavePageState();
@@ -1359,6 +1374,11 @@ async function restoreYTState() {
                 correct: state.keysCorrect || 0,
                 wrong: state.keysWrong || 0,
                 mistakes: state.mistakes || 0
+            };
+            ytPageKeystrokes = {
+                total: state.pageKeysTotal || 0,
+                correct: state.pageKeysCorrect || 0,
+                wrong: state.pageKeysWrong || 0
             };
             ytTypingState.completedMistakes = state.completedMistakes || 0;
             return true;
@@ -1423,65 +1443,69 @@ async function loadPage() {
     // Now restore state (after sequence is generated, so bounds match)
     const hasLocalState = await restoreYTState();
 
-    // Load page state from API (portable storage) - this is the source of truth
-    const apiState = await loadPageStateFromApi();
-    
-    // Check if there's any saved progress in API (cursor position OR keystrokes)
-    const hasApiProgress = apiState && (
-        apiState.currentIndex > 0 ||
-        apiState.pageKeystrokesTotal > 0 ||
-        apiState.pageKeystrokesCorrect > 0 ||
-        apiState.pageKeystrokesWrong > 0
-    );
-    
-    if (hasApiProgress && apiState.currentIndex > ytCurrentIndex) {
-        // API has newer/more progress - use API state
-        ytCurrentIndex = apiState.currentIndex || 0;
-        // Convert array to Map (sparse array: only defined indices)
-        ytTypedCorrectnessMap.clear();
-        if (apiState.correctness && Array.isArray(apiState.correctness)) {
-            apiState.correctness.forEach((value, index) => {
-                if (value !== undefined) {
-                    ytTypedCorrectnessMap.set(index, value);
-                }
-            });
+    if (hasLocalState) {
+        // Local state restored - render it
+        clearInterval(ytWpmInterval);
+        updateYTWpm();
+        renderYTTypingArea();
+        updateYTStepGuide();
+        showYTPausedIndicator(false);
+    } else {
+        // No local state - check API
+        const apiState = await loadPageStateFromApi();
+        
+        const hasApiProgress = apiState && (
+            apiState.currentIndex > 0 ||
+            apiState.pageKeystrokesTotal > 0 ||
+            apiState.pageKeystrokesCorrect > 0 ||
+            apiState.pageKeystrokesWrong > 0
+        );
+        
+        if (hasApiProgress) {
+            // Restore from API
+            ytCurrentIndex = apiState.currentIndex || 0;
+            ytTypedCorrectnessMap.clear();
+            if (apiState.correctness && Array.isArray(apiState.correctness)) {
+                apiState.correctness.forEach((value, index) => {
+                    if (value !== undefined) {
+                        ytTypedCorrectnessMap.set(index, value);
+                    }
+                });
+            }
+            ytTypingState.completedWords = apiState.completedWords || 0;
+            ytTypingState.timeSpentMs = apiState.timeSpentMs || 0;
+            ytKeystrokes = {
+                total: apiState.keysTotal || 0,
+                correct: apiState.keysCorrect || 0,
+                wrong: apiState.keysWrong || 0,
+                mistakes: apiState.mistakes || 0
+            };
+            ytTypingState.correct = apiState.keysCorrect || 0;
+            ytTypingState.wrong = apiState.keysWrong || 0;
+            ytTypingState.startTime = null;
+            ytTypingState.lastStartTime = null;
+            ytTypingState.lastKeystrokeTime = null;
+            ytTypingState.isPaused = false;
+            
+            ytPageKeystrokes = {
+                total: apiState.pageKeystrokesTotal || 0,
+                correct: apiState.pageKeystrokesCorrect || 0,
+                wrong: apiState.pageKeystrokesWrong || 0
+            };
+            
+            saveYTState(); // Sync to localStorage
+        } else {
+            // No saved progress anywhere - initialize fresh
+            resetYTPageTyping();
+            return; // resetYTPageTyping() already calls render/update
         }
-        ytTypingState.completedWords = apiState.completedWords || 0;
-        ytTypingState.timeSpentMs = apiState.timeSpentMs || 0;
-        ytKeystrokes = {
-            total: apiState.keysTotal || 0,
-            correct: apiState.keysCorrect || 0,
-            wrong: apiState.keysWrong || 0,
-            mistakes: apiState.mistakes || 0
-        };
-        ytTypingState.correct = apiState.keysCorrect || 0;
-        ytTypingState.wrong = apiState.keysWrong || 0;
-        ytTypingState.startTime = null;
-        ytTypingState.lastStartTime = null;
-        ytTypingState.lastKeystrokeTime = null;
-        ytTypingState.isPaused = false;
         
-        // Restore page-specific stats
-        ytPageKeystrokes = {
-            total: apiState.pageKeystrokesTotal || 0,
-            correct: apiState.pageKeystrokesCorrect || 0,
-            wrong: apiState.pageKeystrokesWrong || 0
-        };
-        
-        // Sync to localStorage for backup
-        saveYTState();
-    } else if (!hasLocalState) {
-        // No saved progress anywhere - initialize fresh
-        resetYTPageTyping();
-        return; // resetYTPageTyping() already calls render/update
+        clearInterval(ytWpmInterval);
+        updateYTWpm();
+        renderYTTypingArea();
+        updateYTStepGuide();
+        showYTPausedIndicator(true);
     }
-
-    // Render the current state (from localStorage or API)
-    clearInterval(ytWpmInterval);
-    updateYTWpm();
-    renderYTTypingArea();
-    updateYTStepGuide();
-    showYTPausedIndicator(!hasLocalState && !hasApiProgress);
 
     // Update navigation UI
     updateNavigationUI();
@@ -1984,11 +2008,16 @@ function syncCurrentStatsToServer() {
     }).catch(e => console.error(e));
 }
 
-function updateYTWpm() {
-    let elapsed = ytTypingState.timeSpentMs;
+function getYTTotalElapsed() {
+    let elapsed = ytTypingState.timeSpentMs || 0;
     if (ytTypingState.lastStartTime && ytCurrentIndex < ytSequence.length && !ytTypingState.isPaused) {
         elapsed += (Date.now() - ytTypingState.lastStartTime);
     }
+    return elapsed;
+}
+
+function updateYTWpm() {
+    const elapsed = getYTTotalElapsed();
     const mins = elapsed / 60000;
     const currentMistakes = getCompletedMistakes(ytTypedCorrectnessMap, getClusterBoundaries(ytSequence), ytNText);
     const totalMistakes = ytTypingState.completedMistakes + currentMistakes;
