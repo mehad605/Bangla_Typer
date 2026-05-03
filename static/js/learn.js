@@ -269,15 +269,16 @@ let learnCurrentIndex = 0;
 let learnTypedCorrectness = [];
 let learnTypingInterval = null;
 let learnKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
-let learnTypingState = { 
-    startTime: null, 
+let learnTypingState = {
+    startTime: null,
     endTime: null,
-    wpmHistory: [], 
-    errHistory: [], 
-    lastCorr: 0, 
-    lastTotal: 0, 
-    lastErr: 0, 
-    lastMistakes: 0 
+    wpmHistory: [],
+    errHistory: [],
+    lastCorr: 0,
+    lastTotal: 0,
+    lastErr: 0,
+    lastMistakes: 0,
+    lastWrong: 0
 };
 let learnCurrentView = 'main';
 let learnChartInstance = null;
@@ -312,15 +313,16 @@ function resetLearnTypingState() {
     learnCurrentIndex = 0;
     learnTypedCorrectness = [];
     learnKeystrokes = { total: 0, correct: 0, wrong: 0, mistakes: 0 };
-    learnTypingState = { 
-        startTime: null, 
+    learnTypingState = {
+        startTime: null,
         endTime: null,
-        wpmHistory: [], 
-        errHistory: [], 
-        lastCorr: 0, 
-        lastTotal: 0, 
-        lastErr: 0, 
-        lastMistakes: 0 
+        wpmHistory: [],
+        errHistory: [],
+        lastCorr: 0,
+        lastTotal: 0,
+        lastErr: 0,
+        lastMistakes: 0,
+        lastWrong: 0
     };
 }
 
@@ -921,7 +923,9 @@ function handleLearnInput(e) {
                 currentWpm = WPMCalculator.calculateNetWPM(learnKeystrokes.total, mists, elapsedMs, learnKeystrokes.correct);
             }
             learnTypingState.wpmHistory.push(currentWpm);
-            learnTypingState.errHistory.push(learnKeystrokes.wrong);
+            const newErr = learnKeystrokes.wrong - learnTypingState.lastWrong;
+            learnTypingState.errHistory.push(newErr);
+            learnTypingState.lastWrong = learnKeystrokes.wrong;
             updateLearnStats();
         }, 1000);
     }
@@ -1072,6 +1076,9 @@ function renderLearnChart() {
     if (learnChartInstance) learnChartInstance.destroy();
 
     const labels = Array.from({ length: learnTypingState.wpmHistory.length }, (_, i) => i + 1);
+    const errData = learnTypingState.errHistory.map(e => e > 0 ? e : null);
+    const maxErr = Math.max(...learnTypingState.errHistory, 1);
+
     learnChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
@@ -1089,7 +1096,7 @@ function renderLearnChart() {
                 },
                 {
                     label: 'errors',
-                    data: learnTypingState.errHistory.map(e => e > 0 ? e : null),
+                    data: errData,
                     type: 'line',
                     showLine: false,
                     pointStyle: 'crossRot',
@@ -1097,7 +1104,8 @@ function renderLearnChart() {
                     pointBorderWidth: 2,
                     borderColor: getThemeColor('--wrong'),
                     backgroundColor: getThemeColor('--wrong'),
-                    yAxisID: 'y1'
+                    yAxisID: 'y1',
+                    tooltip: { callbacks: { label: ctx => `errors: ${ctx.raw}` } }
                 }
             ]
         },
@@ -1109,12 +1117,23 @@ function renderLearnChart() {
                     display: true,
                     position: 'top',
                     labels: { color: getThemeColor('--subtext'), usePointStyle: true, font: { family: "'JetBrains Mono', monospace", size: 12 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.dataset.label === 'errors') {
+                                const v = ctx.raw;
+                                return v !== null ? `errors: ${v}` : null;
+                            }
+                            return `${ctx.dataset.label}: ${ctx.raw}`;
+                        }
+                    }
                 }
             },
             scales: {
                 x: { grid: { color: getThemeColor('--surface2'), drawBorder: false }, ticks: { color: getThemeColor('--subtext'), font: { family: "'JetBrains Mono', monospace" } } },
                 y: { display: true, position: 'left', grid: { color: getThemeColor('--surface2'), drawBorder: false }, ticks: { color: getThemeColor('--subtext'), stepSize: 20, font: { family: "'JetBrains Mono', monospace" } }, beginAtZero: true },
-                y1: { display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: getThemeColor('--wrong'), stepSize: 1, precision: 0, font: { family: "'JetBrains Mono', monospace" } }, beginAtZero: true }
+                y1: { display: true, position: 'right', grid: { drawOnChartArea: false }, min: 0, max: maxErr, ticks: { color: getThemeColor('--wrong'), stepSize: 1, precision: 0, font: { family: "'JetBrains Mono', monospace" } }, beginAtZero: true }
             }
         }
     });
