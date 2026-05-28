@@ -7,6 +7,11 @@ on:
         description: "Release version (e.g., 1.2.3). Leave empty to build without publishing."
         required: false
         type: string
+      use_changelog:
+        description: "Extract human-readable notes from CHANGELOG.md?"
+        required: false
+        type: boolean
+        default: true
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+*"
@@ -311,6 +316,9 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.version != '')
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -334,11 +342,30 @@ jobs:
           ls -lh release/
           echo "::endgroup::"
 
+      - name: Extract Changelog
+        id: extract_changelog
+        if: >-
+          (github.event_name == 'push' && github.ref_type == 'tag') ||
+          (github.event_name == 'workflow_dispatch' && inputs.use_changelog == true)
+        shell: bash
+        run: |
+          VERSION="${{ env.VERSION || inputs.version }}"
+          touch RELEASE_NOTES.md
+          if [ -f "CHANGELOG.md" ] && [ -n "$VERSION" ]; then
+            # Extract the section between the target version header and the next version header
+            awk -v ver="$VERSION" '
+              /^## \[/ { if (p) { exit } }
+              $0 ~ ("^## \\[" ver "\\]") { p=1; next }
+              p { print }
+            ' CHANGELOG.md | sed '/^$/N;/^\n$/D' > RELEASE_NOTES.md
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VERSION || inputs.version }}
           name: Bangla Typer ${{ env.VERSION || inputs.version }}
+          body_path: RELEASE_NOTES.md
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(env.VERSION || inputs.version, '-') }}
