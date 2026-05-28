@@ -327,13 +327,12 @@ function resetLearnTypingState() {
 }
 
 window.focusLearnInput = function() {
-    const consoleScreen = document.getElementById('learn-console-screen');
-    if (consoleScreen) {
-        consoleScreen.focus({ preventScroll: true });
+    const input = document.getElementById('learn-hidden-input');
+    if (!input) {
+        const consoleScreen = document.getElementById('learn-console-screen');
+        if (consoleScreen) consoleScreen.focus({ preventScroll: true });
         return;
     }
-    const input = document.getElementById('learn-hidden-input');
-    if (!input) return;
     input.focus({ preventScroll: true });
 };
 
@@ -355,18 +354,15 @@ function shouldIgnoreLearnTypingTarget(target) {
 function routeLearnInput(e) {
     if (e.__learnTypingHandled) return;
     if (!isLearnTypingActive()) return;
-    if (shouldIgnoreLearnTypingTarget(e.target)) return;
     e.__learnTypingHandled = true;
     handleLearnInput(e);
 }
 
-document.addEventListener('keydown', routeLearnInput, true);
-
 function bindLearnTypingEvents() {
-    const consoleScreen = document.getElementById('learn-console-screen');
-    if (!consoleScreen) return;
-    consoleScreen.addEventListener('keydown', routeLearnInput);
-    consoleScreen.addEventListener('click', window.focusLearnInput);
+    const input = document.getElementById('learn-hidden-input');
+    if (input) {
+        input.addEventListener('keydown', routeLearnInput);
+    }
     window.focusLearnInput();
 }
 
@@ -801,6 +797,7 @@ function renderLearnConsole() {
                     <div id="learn-typed-display"></div>
                     <input type="text" id="learn-hidden-input" class="hidden-input" autocomplete="off" autocorrect="off" spellcheck="false">
                 </div>
+                <div class="focus-warning" onclick="window.focusLearnInput()">Click here to focus</div>
 
                 <div class="yt-bottom-area" style="padding: 1rem 0;">
                     <div class="keyboard-wrap" id="learn-svg-container"></div>
