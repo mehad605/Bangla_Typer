@@ -167,11 +167,11 @@ def _ydl_run(action_label: str, base_opts: dict, target: str, is_download: bool)
 # Core download
 # ---------------------------------------------------------------------------
 
-def download_video(url: str) -> bool:
+def download_video(url: str) -> tuple[bool, str]:
     video_id = extract_video_id(url)
     if not video_id:
         print(f"  [SKIP] Not a valid YouTube URL: {url}")
-        return False
+        return False, "Not a valid YouTube URL (সঠিক ইউটিউব লিঙ্ক নয়)"
 
     print(f"\n{'=' * 60}")
     print(f"Processing: {url}")
@@ -194,8 +194,9 @@ def download_video(url: str) -> bool:
             is_download=False,
         )
     except Exception as e:
-        print(f"  [ERROR] Could not fetch video info: {e}")
-        return False
+        err_str = str(e)
+        print(f"  [ERROR] Could not fetch video info: {err_str}")
+        return False, f"ভিডিওর তথ্য পাওয়া যায়নি (Info fetch failed): {err_str}"
 
     title      = info.get("title", "Unknown Title")
     channel    = info.get("uploader", "Unknown Channel")
@@ -209,7 +210,7 @@ def download_video(url: str) -> bool:
 
     if vtt_path.exists():
         print(f"  [SKIP] VTT already exists: {vtt_path.name}")
-        return True
+        return True, "Success"
 
     # --- Thumbnail ---
     existing_thumb = next(
@@ -297,10 +298,10 @@ def download_video(url: str) -> bool:
 
     if not vtt_downloaded:
         print(f"  [WARN] No subtitles found for: {title}")
-        return False
+        return False, "ভিডিওটিতে কোন ক্যাপশন/সাবটাইটেল নেই (No captions found)"
 
     inject_metadata(vtt_path, title, channel, url)
-    return True
+    return True, "Success"
 
 
 # ---------------------------------------------------------------------------
@@ -355,7 +356,9 @@ def main() -> int:
     for i, url in enumerate(to_do, 1):
         print(f"\n  [{i}/{len(to_do)}]")
         try:
-            result = download_video(url)
+            result, msg = download_video(url)
+            if not result:
+                print(f"  [ERROR] {msg}")
         except Exception as e:
             print(f"  [ERROR] Unexpected error for {url}: {e}")
             result = False

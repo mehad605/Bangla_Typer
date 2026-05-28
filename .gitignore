@@ -95,3 +95,8 @@ desktop.ini
 .codex
 AGENTS.md
 SPRINT_VERIFICATION_REPORT.md
+.agents/
+.fallow/
+.fallowrc.json
+fallow_*.json
+skills-lock.json

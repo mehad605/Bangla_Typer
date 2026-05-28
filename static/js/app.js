@@ -1733,6 +1733,7 @@ function focusYTTyping() {
 document.getElementById('yt-console-input').addEventListener('keydown', e => {
     if (["Enter", "Tab", "Shift", "Control", "Alt", "CapsLock"].includes(e.key) && e.key !== 'Enter') return;
     e.preventDefault();
+    if (window.AudioController) window.AudioController.play();
 
     if (e.key === 'Backspace') {
         if (ytCurrentIndex === 0) return;
@@ -3413,6 +3414,7 @@ document.querySelector('.inst-typing-area').addEventListener('click', () => {
 document.getElementById('hidden-input').addEventListener('keydown', e => {
     if (["Enter", "Tab", "Shift", "Control", "Alt", "CapsLock"].includes(e.key) && e.key !== 'Enter') return;
     e.preventDefault();
+    if (window.AudioController) window.AudioController.play();
 
     if (e.key === 'Backspace') {
         if (currentIndex === 0) return;

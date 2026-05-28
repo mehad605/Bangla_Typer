@@ -58,7 +58,9 @@ Traditional typing tutors often treat Bangla like English, ignoring its phonetic
 ### 🎨 Premium Experience
 - **Sleek UI Themes**: High-contrast, easy-on-the-eyes themes including Tokyo Night, Dracula, Nord, and more.
 - **Muscle Memory Aids**: Toggleable visual hints, including interactive keyboard layouts and finger positioning guides.
+- **Auditory Feedback**: Zero-latency, highly responsive keypress sounds engineered with the Web Audio API to reinforce rhythm and typing cadence.
 - **Offline First**: 100% privacy—all your data and settings stay where they belong: on your machine.
+
 
 ---
 

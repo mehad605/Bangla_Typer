@@ -111,13 +111,13 @@ def process_url(url: str):
 
             # Call download logic directly instead of subprocess
             try:
-                success = dl_script.download_video(url)
+                success, dl_msg = dl_script.download_video(url)
             except Exception as e:
                 yield send_event({"error": f"Caption ডাউনলোড এরর: {str(e)}"})
                 return
 
             if not success:
-                yield send_event({"error": "Caption ডাউনলোড ব্যর্থ হয়েছে।"})
+                yield send_event({"error": f"ডাউনলোড ব্যর্থ: {dl_msg}"})
                 return
 
             temp_dir = _get_temp_dir()

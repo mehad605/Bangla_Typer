@@ -57,6 +57,10 @@ class TypingEngine {
                                 <div class="hint-row"><span class="hint-label">💬 Step guide</span><label class="toggle"><input type="checkbox" id="${p}tog-guide" checked onchange="this.dispatchEvent(new CustomEvent('hint-toggle', {bubbles:true}))"><span class="toggle-slider"></span></label></div>
                             </div>
                         </div>
+                        <div class="audio-control" style="position: relative; display: inline-flex; align-items: center; margin-left: 10px; padding: 4px; border-radius: 4px; cursor: pointer; color: var(--text-dim);" onwheel="if(window.AudioController) window.AudioController.handleScroll(event, '${p}vol-ind')" title="Scroll to change volume">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                            <div id="${p}vol-ind" style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 5px; background: var(--bg-hover); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; display: none; white-space: nowrap; z-index: 50; color: var(--text-main); border: 1px solid var(--border);">50%</div>
+                        </div>
                     </div>
                     <div class="stats" style="flex-direction: column; align-items: flex-end; gap: 0.5rem;">
                     </div>
@@ -125,6 +129,7 @@ class TypingEngine {
         if (this.isFinished) return;
         if (["Tab", "Shift", "Control", "Alt", "CapsLock", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
         e.preventDefault();
+        if (window.AudioController) window.AudioController.play();
 
         if (e.key === 'Backspace') {
             if (this.currentIndex === 0) return;
