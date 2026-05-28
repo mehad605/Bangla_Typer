@@ -2,6 +2,17 @@
 
 All notable changes to Bangla Typer are documented here.
 
+## [1.2.0] - 2026-05-28
+
+### Added
+- **Web Audio API**: Implemented zero-latency, concurrent keypress audio playback across all three typing modes.
+- **Automated Release Notes**: Configured GitHub Actions to automatically extract and inject human-readable changelog notes into releases.
+
+### Fixed
+- **Focus Bug**: Fixed an issue where typing modes (especially Learn Mode) would incorrectly register keystrokes even when the window was out of focus.
+- **Visual Focus Indication**: Added dimming, blur effects, and pulsing "Click here to focus" prompts when the typing area loses focus across all modes.
+- **Instant Mode Spacing**: Fixed incorrect margin spacing below the typing console in Instant Mode.
+
 ## [1.1.0] - 2026-05-01
 
 ### Added
